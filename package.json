@@ -1,0 +1,83 @@
+{
+	"name": "ccmanager",
+	"version": "4.3.1",
+	"description": "TUI application for managing multiple Claude Code sessions across Git worktrees",
+	"license": "MIT",
+	"author": "Kodai Kabasawa",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/kbwo/ccmanager.git"
+	},
+	"keywords": [
+		"claude",
+		"code",
+		"worktree",
+		"git",
+		"tui",
+		"cli"
+	],
+	"bin": {
+		"ccmanager": "bin/cli.js"
+	},
+	"type": "module",
+	"scripts": {
+		"build": "bun run tsc",
+		"build:binary": "bun run scripts/build-binaries.ts",
+		"build:binary:native": "bun run scripts/build-binaries.ts --target=native",
+		"build:binary:all": "bun run scripts/build-binaries.ts --target=all",
+		"dev": "bun run tsc --watch",
+		"start": "bun --no-env-file dist/cli.js",
+		"test": "vitest --run",
+		"lint": "bun run eslint src",
+		"lint:fix": "bun run eslint src --fix",
+		"typecheck": "bun run tsc --noEmit",
+		"prepublishOnly": "bun run lint && bun run typecheck && bun run test && bun run build",
+		"prepare": "bun run build",
+		"publish:packages": "bun run scripts/publish-packages.ts",
+		"publish:packages:dry": "bun run scripts/publish-packages.ts --dry-run"
+	},
+	"files": [
+		"dist",
+		"bin"
+	],
+	"optionalDependencies": {
+		"@kodaikabasawa/ccmanager-darwin-arm64": "4.3.1",
+		"@kodaikabasawa/ccmanager-darwin-x64": "4.3.1",
+		"@kodaikabasawa/ccmanager-linux-arm64": "4.3.1",
+		"@kodaikabasawa/ccmanager-linux-x64": "4.3.1",
+		"@kodaikabasawa/ccmanager-win32-x64": "4.3.1"
+	},
+	"devDependencies": {
+		"@eslint/js": "^9.28.0",
+		"@sindresorhus/tsconfig": "^8.1.0",
+		"@types/bun": "latest",
+		"@types/react": "^19.2.9",
+		"@typescript-eslint/eslint-plugin": "^8.33.1",
+		"@typescript-eslint/parser": "^8.33.1",
+		"@vdemedes/prettier-config": "^2.0.1",
+		"chalk": "^5.2.0",
+		"eslint": "^9.28.0",
+		"eslint-config-prettier": "^10.1.5",
+		"eslint-plugin-prettier": "^5.4.1",
+		"eslint-plugin-react": "^7.32.2",
+		"eslint-plugin-react-hooks": "^5.2.0",
+		"ink-testing-library": "4.0.0",
+		"prettier": "^3.0.0",
+		"typescript": "^5.0.3",
+		"vitest": "^4.0.16"
+	},
+	"prettier": "@vdemedes/prettier-config",
+	"dependencies": {
+		"@xterm/addon-serialize": "^0.14.0",
+		"@xterm/headless": "^6.0.0",
+		"effect": "^3.18.2",
+		"ink": "^6.6.0",
+		"ink-select-input": "^6.0.0",
+		"ink-text-input": "^6.0.0",
+		"meow": "^14.0.0",
+		"react": "^19.2.3",
+		"react-devtools-core": "^6.1.2",
+		"react-dom": "^19.2.3",
+		"strip-ansi": "^7.1.0"
+	}
+}

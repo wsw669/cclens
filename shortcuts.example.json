@@ -1,0 +1,9 @@
+{
+  "returnToMenu": {
+    "ctrl": true,
+    "key": "r"
+  },
+  "cancel": {
+    "key": "escape"
+  }
+}

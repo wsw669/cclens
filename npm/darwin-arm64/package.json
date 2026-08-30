@@ -1,0 +1,21 @@
+{
+	"name": "@kodaikabasawa/ccmanager-darwin-arm64",
+	"version": "4.3.1",
+	"description": "ccmanager binary for macOS ARM64 (Apple Silicon)",
+	"license": "MIT",
+	"author": "Kodai Kabasawa",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/kbwo/ccmanager.git"
+	},
+	"os": [
+		"darwin"
+	],
+	"cpu": [
+		"arm64"
+	],
+	"files": [
+		"bin/ccmanager"
+	],
+	"preferUnplugged": true
+}

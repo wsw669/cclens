@@ -1,0 +1,219 @@
+import React, {useEffect, useRef} from 'react';
+import {useStdout} from 'ink';
+import {Session as ISession} from '../types/index.js';
+import {SessionManager} from '../services/sessionManager.js';
+import {shortcutManager} from '../services/shortcutManager.js';
+
+interface SessionProps {
+	session: ISession;
+	sessionManager: SessionManager;
+	onReturnToMenu: () => void;
+}
+
+const Session: React.FC<SessionProps> = ({
+	session,
+	sessionManager,
+	onReturnToMenu,
+}) => {
+	const {stdout} = useStdout();
+	const isExitingRef = useRef(false);
+
+	const normalizeLineEndings = (input: string): string => {
+		// Ensure LF moves to column 0 to prevent cursor drift when ONLCR is disabled.
+		let normalized = '';
+		for (let i = 0; i < input.length; i++) {
+			const char = input[i];
+			if (char === '\n') {
+				const prev = i > 0 ? input[i - 1] : '';
+				if (prev !== '\r') {
+					normalized += '\r';
+				}
+			}
+			normalized += char;
+		}
+		return normalized;
+	};
+
+	useEffect(() => {
+		if (!stdout) return;
+
+		const resetTerminalInputModes = () => {
+			// Reset terminal modes that interactive tools like Codex enable (kitty keyboard
+			// protocol / modifyOtherKeys / focus tracking) so they don't leak into other
+			// sessions after we detach.
+			stdout.write('\x1b[>0u'); // Disable kitty keyboard protocol (CSI u sequences)
+			stdout.write('\x1b[>4;0m'); // Disable xterm modifyOtherKeys extensions
+			stdout.write('\x1b[?1004l'); // Disable focus reporting
+			stdout.write('\x1b[?2004l'); // Disable bracketed paste (can interfere with shortcuts)
+			stdout.write('\x1b[?7h'); // Re-enable auto-wrap
+		};
+
+		// Set up raw input handling
+		const stdin = process.stdin;
+
+		// Configure stdin for PTY passthrough
+		if (stdin.isTTY) {
+			stdin.setRawMode(true);
+			stdin.resume();
+		}
+		stdin.setEncoding('utf8');
+
+		const handleStdinData = (data: string) => {
+			if (isExitingRef.current) return;
+
+			// Check for return to menu shortcut
+			if (shortcutManager.matchesRawInput('returnToMenu', data)) {
+				isExitingRef.current = true;
+				sessionManager.setSessionActive(session.id, false);
+				// Disable any extended input modes that might have been enabled by the PTY
+				if (stdout) {
+					resetTerminalInputModes();
+				}
+				// Remove our listener — Ink will reconfigure stdin when Menu mounts
+				stdin.removeListener('data', handleStdinData);
+				onReturnToMenu();
+				return;
+			}
+
+			if (session.stateMutex.getSnapshot().state === 'pending_auto_approval') {
+				sessionManager.cancelAutoApproval(
+					session.id,
+					'User input received during auto-approval',
+				);
+			}
+
+			// Pass all other input directly to the PTY
+			session.process.write(data);
+		};
+
+		stdin.on('data', handleStdinData);
+
+		// Clear the viewport and the host terminal's scrollback (\x1b[3J) when
+		// entering a session. The restore snapshot then rebuilds the whole
+		// canvas — scrollback included — from this session's headless buffer,
+		// so content left behind by the menu or other sessions can never
+		// appear when the user scrolls up. \x1b[2J runs first because some
+		// emulators (e.g. xterm.js-based ones) push the erased viewport into
+		// scrollback, which \x1b[3J must then discard.
+		stdout.write('\x1B[2J\x1B[3J\x1B[H');
+
+		// Restore the current terminal state from the headless xterm snapshot.
+		// The xterm serialize addon relies on auto-wrap (DECAWM) being enabled
+		// to render wrapped lines. It omits row separators for wrapped rows
+		// and expects characters to naturally overflow to the next line, so
+		// re-enable DECAWM around the snapshot write and restore the live-TUI
+		// default afterward. This matters for both the synchronous initial
+		// restore and the deferred restore that may fire after Session.tsx
+		// has already disabled DECAWM for live TUI redraws.
+		const handleSessionRestore = (
+			restoredSession: ISession,
+			restoreSnapshot: string,
+		) => {
+			if (restoredSession.id === session.id && !isExitingRef.current) {
+				if (restoreSnapshot.length > 0) {
+					stdout.write(`\x1b[?7h${restoreSnapshot}\x1b[?7l`);
+				}
+			}
+		};
+
+		// Listen for restore event first
+		sessionManager.on('sessionRestore', handleSessionRestore);
+
+		// Repaint the user's terminal viewport from the post-resize headless
+		// snapshot. Without this, Ink-based TUIs (e.g. Claude Code) re-emit
+		// their full static history on SIGWINCH, which the user's terminal
+		// appends below the (already-clipped) viewport, producing duplicated
+		// rows equal to the resize delta.
+		const handleSessionResize = (
+			resizedSession: ISession,
+			redrawPayload: string,
+		) => {
+			if (
+				resizedSession.id === session.id &&
+				redrawPayload.length > 0 &&
+				!isExitingRef.current
+			) {
+				stdout.write(redrawPayload);
+			}
+		};
+		sessionManager.on('sessionResize', handleSessionResize);
+
+		// Listen for session data events
+		const handleSessionData = (activeSession: ISession, data: string) => {
+			// Only handle data for our session
+			if (activeSession.id === session.id && !isExitingRef.current) {
+				stdout.write(normalizeLineEndings(data));
+			}
+		};
+
+		const handleSessionExit = (exitedSession: ISession) => {
+			if (exitedSession.id === session.id) {
+				isExitingRef.current = true;
+				// Don't call onReturnToMenu here - App component handles it
+			}
+		};
+
+		sessionManager.on('sessionData', handleSessionData);
+		sessionManager.on('sessionExit', handleSessionExit);
+
+		// Immediately resize the PTY and terminal to current dimensions
+		// This fixes rendering issues when terminal width changed while in menu
+		// https://github.com/kbwo/ccmanager/issues/2
+		const currentCols = process.stdout.columns || 80;
+		const currentRows = process.stdout.rows || 24;
+
+		// Do not delete try-catch
+		// Prevent ccmanager from exiting when claude process has already exited
+		try {
+			session.process.resize(currentCols, currentRows);
+			if (session.terminal) {
+				session.terminal.resize(currentCols, currentRows);
+			}
+		} catch {
+			/* empty */
+		}
+
+		// Mark session as active after resizing so the restore snapshot matches
+		// the current terminal dimensions. setSessionActive synchronously emits the
+		// restore event, so the snapshot is written to stdout before we proceed.
+		sessionManager.setSessionActive(session.id, true);
+
+		// Prevent line wrapping from drifting redraws in TUIs that rely on
+		// cursor-up clears. This must happen after the restore snapshot write,
+		// otherwise wrapped restore content can overlap on the same row.
+		stdout.write('\x1b[?7l');
+
+		// Handle terminal resize
+		const handleResize = () => {
+			const cols = process.stdout.columns || 80;
+			const rows = process.stdout.rows || 24;
+			sessionManager.performResize(session.id, cols, rows);
+		};
+
+		stdout.on('resize', handleResize);
+
+		return () => {
+			// Remove our stdin listener
+			stdin.removeListener('data', handleStdinData);
+
+			// Disable extended input modes that might have been enabled by the PTY
+			if (stdout) {
+				resetTerminalInputModes();
+			}
+
+			// Mark session as inactive
+			sessionManager.setSessionActive(session.id, false);
+
+			// Remove event listeners
+			sessionManager.off('sessionRestore', handleSessionRestore);
+			sessionManager.off('sessionResize', handleSessionResize);
+			sessionManager.off('sessionData', handleSessionData);
+			sessionManager.off('sessionExit', handleSessionExit);
+			stdout.off('resize', handleResize);
+		};
+	}, [session, sessionManager, stdout, onReturnToMenu]);
+
+	return null;
+};
+
+export default Session;

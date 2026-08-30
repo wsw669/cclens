@@ -1,0 +1,745 @@
+import React, {useState, useEffect, useRef} from 'react';
+import {Box, Text, useInput} from 'ink';
+import SelectInput from 'ink-select-input';
+import {Effect} from 'effect';
+import {Worktree, Session, GitProject, MenuAction} from '../types/index.js';
+import {WorktreeService} from '../services/worktreeService.js';
+import {SessionManager} from '../services/sessionManager.js';
+import {GitError} from '../types/errors.js';
+import {
+	STATUS_ICONS,
+	STATUS_LABELS,
+	MENU_ICONS,
+} from '../constants/statusIcons.js';
+import {useGitStatus} from '../hooks/useGitStatus.js';
+import {
+	prepareSessionItems,
+	calculateColumnPositions,
+	assembleSessionLabel,
+} from '../utils/worktreeUtils.js';
+import {projectManager} from '../services/projectManager.js';
+import {RecentProject} from '../types/index.js';
+import {useSearchMode} from '../hooks/useSearchMode.js';
+import {useDynamicLimit} from '../hooks/useDynamicLimit.js';
+import {
+	filterSessionItemsByQuery,
+	filterSessionItemsByState,
+	cycleSessionStateFilter,
+	getSessionStateFilterLabel,
+	SessionStateFilter,
+} from '../utils/filterByQuery.js';
+import SearchableList from './SearchableList.js';
+import {globalSessionOrchestrator} from '../services/globalSessionOrchestrator.js';
+import {configReader} from '../services/config/configReader.js';
+
+interface MenuProps {
+	sessionManager: SessionManager;
+	worktreeService: WorktreeService;
+	initialSnapshot?: MenuSnapshot;
+	onSnapshotChange?: (snapshot: MenuSnapshot) => void;
+	onMenuAction: (action: MenuAction) => void;
+	onSelectRecentProject?: (project: GitProject) => void;
+	error?: string | null;
+	onDismissError?: () => void;
+	projectName?: string;
+	multiProject?: boolean;
+	version: string;
+}
+
+export interface MenuSnapshot {
+	worktrees: Worktree[];
+	defaultBranch: string | null;
+	loadError?: string | null;
+}
+
+interface CommonItem {
+	type: 'common';
+	label: string;
+	value: string;
+}
+
+interface SessionMenuItem {
+	type: 'worktree';
+	label: string;
+	value: string;
+	worktree: Worktree;
+	session?: Session;
+}
+
+interface ProjectItem {
+	type: 'project';
+	label: string;
+	value: string;
+	recentProject: RecentProject;
+}
+
+type MenuItem = CommonItem | SessionMenuItem | ProjectItem;
+
+const createSeparatorWithText = (
+	text: string,
+	totalWidth: number = 35,
+): string => {
+	const textWithSpaces = ` ${text} `;
+	const textLength = textWithSpaces.length;
+	const remainingWidth = totalWidth - textLength;
+	const leftDashes = Math.floor(remainingWidth / 2);
+	const rightDashes = Math.ceil(remainingWidth / 2);
+
+	return '─'.repeat(leftDashes) + textWithSpaces + '─'.repeat(rightDashes);
+};
+
+/**
+ * Format GitError for display
+ * Extracts relevant error information using pattern matching
+ */
+const formatGitError = (error: GitError): string => {
+	return `Git command failed: ${error.command} (exit ${error.exitCode})\n${error.stderr}`;
+};
+
+const Menu: React.FC<MenuProps> = ({
+	sessionManager,
+	worktreeService,
+	initialSnapshot,
+	onSnapshotChange,
+	onMenuAction,
+	onSelectRecentProject,
+	error,
+	onDismissError,
+	projectName,
+	multiProject = false,
+	version,
+}) => {
+	const [baseWorktrees, setBaseWorktrees] = useState<Worktree[]>(
+		() => initialSnapshot?.worktrees ?? [],
+	);
+	const [defaultBranch, setDefaultBranch] = useState<string | null>(
+		() => initialSnapshot?.defaultBranch ?? null,
+	);
+	const [loadError, setLoadError] = useState<string | null>(
+		() => initialSnapshot?.loadError ?? null,
+	);
+	const snapshotRef = useRef<MenuSnapshot>({
+		worktrees: initialSnapshot?.worktrees ?? [],
+		defaultBranch: initialSnapshot?.defaultBranch ?? null,
+		loadError: initialSnapshot?.loadError ?? null,
+	});
+	const worktrees = useGitStatus(baseWorktrees, defaultBranch);
+	// Seed from the in-memory session list so the cached snapshot renders with its
+	// sessions attached. Waiting for the async git load would leave every row
+	// session-less for that window, disabling the Space session-actions shortcut.
+	const [sessions, setSessions] = useState<Session[]>(() =>
+		sessionManager.getAllSessions(),
+	);
+	const [items, setItems] = useState<MenuItem[]>([]);
+	const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
+	const [highlightedWorktreePath, setHighlightedWorktreePath] = useState<
+		string | null
+	>(null);
+	const [highlightedSession, setHighlightedSession] = useState<
+		Session | undefined
+	>(undefined);
+	const [autoApprovalToggleCounter, setAutoApprovalToggleCounter] = useState(0);
+	const [stateFilter, setStateFilter] = useState<SessionStateFilter>('all');
+
+	// Use the search mode hook
+	const {isSearchMode, searchQuery, selectedIndex, setSearchQuery} =
+		useSearchMode(items.length, {
+			isDisabled: !!error || !!loadError,
+		});
+
+	const limit = useDynamicLimit({
+		isSearchMode,
+		hasError: !!(error || loadError),
+	});
+
+	// Get worktree configuration for sorting
+	const worktreeConfig = configReader.getWorktreeConfig();
+
+	useEffect(() => {
+		let cancelled = false;
+
+		// These operations are independent. Run them concurrently so the initial
+		// menu load waits only for the slower command.
+		const loadWorktreesAndBranch = Effect.all(
+			{
+				worktrees: worktreeService.getWorktreesEffect(),
+				defaultBranch: worktreeService.getDefaultBranchEffect(),
+			},
+			{concurrency: 'unbounded'},
+		);
+
+		Effect.runPromise(
+			Effect.match(loadWorktreesAndBranch, {
+				onFailure: (error: GitError) => ({
+					success: false as const,
+					error,
+				}),
+				onSuccess: ({worktrees, defaultBranch}) => ({
+					success: true as const,
+					worktrees,
+					defaultBranch,
+				}),
+			}),
+		)
+			.then(result => {
+				if (!cancelled) {
+					if (result.success) {
+						// Update sessions after worktrees are loaded
+						const allSessions = sessionManager.getAllSessions();
+						setSessions(allSessions);
+
+						// Update worktree session status
+						result.worktrees.forEach(wt => {
+							wt.hasSession = allSessions.some(s => s.worktreePath === wt.path);
+						});
+
+						setBaseWorktrees(result.worktrees);
+						setDefaultBranch(result.defaultBranch);
+						setLoadError(null);
+						const snapshot = {
+							worktrees: result.worktrees,
+							defaultBranch: result.defaultBranch,
+							loadError: null,
+						};
+						snapshotRef.current = snapshot;
+						onSnapshotChange?.(snapshot);
+					} else {
+						// Handle GitError with pattern matching
+						const loadError = formatGitError(result.error);
+						setLoadError(loadError);
+						const snapshot = {
+							...snapshotRef.current,
+							loadError,
+						};
+						snapshotRef.current = snapshot;
+						onSnapshotChange?.(snapshot);
+					}
+				}
+			})
+			.catch((err: unknown) => {
+				// This catch should not normally be reached with Effect.match
+				if (!cancelled) {
+					const loadError = String(err);
+					setLoadError(loadError);
+					const snapshot = {
+						...snapshotRef.current,
+						loadError,
+					};
+					snapshotRef.current = snapshot;
+					onSnapshotChange?.(snapshot);
+				}
+			});
+
+		// Load recent projects if in multi-project mode
+		if (multiProject) {
+			// Filter out the current project from recent projects
+			const allRecentProjects = projectManager.getRecentProjects();
+			const currentProjectPath = worktreeService.getGitRootPath();
+			const filteredProjects = allRecentProjects.filter(
+				(project: RecentProject) => project.path !== currentProjectPath,
+			);
+			setRecentProjects(filteredProjects);
+		}
+
+		// Listen for session changes
+		const handleSessionChange = () => {
+			const allSessions = sessionManager.getAllSessions();
+			setSessions(allSessions);
+		};
+		sessionManager.on('sessionCreated', handleSessionChange);
+		sessionManager.on('sessionDestroyed', handleSessionChange);
+		sessionManager.on('sessionStateChanged', handleSessionChange);
+
+		return () => {
+			cancelled = true;
+			sessionManager.off('sessionCreated', handleSessionChange);
+			sessionManager.off('sessionDestroyed', handleSessionChange);
+			sessionManager.off('sessionStateChanged', handleSessionChange);
+		};
+	}, [sessionManager, worktreeService, multiProject, onSnapshotChange]);
+
+	useEffect(() => {
+		// Prepare worktree items and calculate layout
+		const items = prepareSessionItems(worktrees, sessions, {
+			sortByLastSession: worktreeConfig.sortByLastSession,
+		});
+		const columnPositions = calculateColumnPositions(items);
+
+		// Filter session items based on search query, matching the name shown in
+		// the menu (branch name, " (main)", and session name) plus the path, then
+		// narrow to the selected session state. The two filters are independent
+		// dimensions and compose: both can be active at once.
+		const filteredItems = filterSessionItemsByState(
+			filterSessionItemsByQuery(items, searchQuery),
+			stateFilter,
+		);
+
+		// Build menu items with proper alignment
+		const menuItems: MenuItem[] = filteredItems.map(
+			(item, index): SessionMenuItem => {
+				const baseLabel = assembleSessionLabel(item, columnPositions);
+				const aaDisabled =
+					configReader.isAutoApprovalEnabled() &&
+					sessionManager.isAutoApprovalDisabledForWorktree(item.worktree.path);
+				const label = baseLabel + (aaDisabled ? ' [Auto Approval Off]' : '');
+
+				// Only show numbers for worktrees (0-9) when not in search mode
+				// Use fixed-width prefix to prevent flicker at scroll boundary
+				const numberPrefix =
+					!isSearchMode && index < 10 ? `${index} ❯ ` : '  ❯ ';
+
+				// Use session id for value if present, otherwise worktree path
+				const value = item.session
+					? `session:${item.session.id}`
+					: item.worktree.path;
+
+				return {
+					type: 'worktree',
+					label: numberPrefix + label,
+					value,
+					worktree: item.worktree,
+					session: item.session,
+				};
+			},
+		);
+
+		// Filter recent projects based on search query
+		const filteredRecentProjects = searchQuery
+			? recentProjects.filter(project =>
+					project.name.toLowerCase().includes(searchQuery.toLowerCase()),
+				)
+			: recentProjects;
+
+		// Add menu options only when not in search mode
+		if (!isSearchMode) {
+			// Add recent projects section if enabled and has recent projects
+			if (multiProject && filteredRecentProjects.length > 0) {
+				menuItems.push({
+					type: 'common',
+					label: createSeparatorWithText('Recent'),
+					value: 'recent-separator',
+				});
+
+				// Add recent projects
+				// Calculate available number shortcuts for recent projects
+				const worktreeCount = filteredItems.length;
+				const availableNumbersForProjects = worktreeCount < 10;
+
+				filteredRecentProjects.forEach((project, index) => {
+					// Get session counts for this project
+					const projectSessions = globalSessionOrchestrator.getProjectSessions(
+						project.path,
+					);
+					const counts = SessionManager.getSessionCounts(projectSessions);
+					const countsFormatted = SessionManager.formatSessionCounts(counts);
+
+					// Assign number shortcuts to recent projects if worktrees < 10
+					let label = project.name + countsFormatted;
+					if (availableNumbersForProjects) {
+						const projectNumber = worktreeCount + index;
+						if (projectNumber < 10) {
+							label = `${projectNumber} ❯ ${label}`;
+						} else {
+							label = `❯ ${label}`;
+						}
+					} else {
+						label = `❯ ${label}`;
+					}
+
+					menuItems.push({
+						type: 'project',
+						label,
+						value: `recent-project-${index}`,
+						recentProject: project,
+					});
+				});
+			}
+
+			// Add menu options
+			const otherMenuItems: MenuItem[] = [
+				{
+					type: 'common',
+					label: createSeparatorWithText('Other'),
+					value: 'other-separator',
+				},
+				{
+					type: 'common',
+					label: `$ ${MENU_ICONS.NEW_WORKTREE} Cost Dashboard`,
+					value: 'cost-dashboard',
+				},
+				{
+					type: 'common',
+					label: `S ${MENU_ICONS.NEW_WORKTREE} Session Summaries`,
+					value: 'summaries',
+				},
+				{
+					type: 'common',
+					label: `N ${MENU_ICONS.NEW_WORKTREE} New Worktree`,
+					value: 'new-worktree',
+				},
+				{
+					type: 'common',
+					label: `M ${MENU_ICONS.MERGE_WORKTREE} Merge Worktree`,
+					value: 'merge-worktree',
+				},
+				{
+					type: 'common',
+					label: `D ${MENU_ICONS.DELETE_WORKTREE} Delete Worktree`,
+					value: 'delete-worktree',
+				},
+			];
+
+			// Add configuration menu items based on multiProject mode
+			if (multiProject) {
+				// In multi-project mode, only show global configuration (backward compatible)
+				otherMenuItems.push({
+					type: 'common',
+					label: `C ${MENU_ICONS.CONFIGURE_SHORTCUTS} Configuration`,
+					value: 'configuration',
+				});
+			} else {
+				// In single-project mode, show both Project and Global configuration
+				otherMenuItems.push({
+					type: 'common',
+					label: `P ${MENU_ICONS.CONFIGURE_SHORTCUTS} Project Configuration`,
+					value: 'configuration-project',
+				});
+				otherMenuItems.push({
+					type: 'common',
+					label: `C ${MENU_ICONS.CONFIGURE_SHORTCUTS} Global Configuration`,
+					value: 'configuration-global',
+				});
+			}
+
+			menuItems.push(...otherMenuItems);
+			if (projectName) {
+				// In multi-project mode, show 'Back to project list'
+				menuItems.push({
+					type: 'common',
+					label: `B 🔙 Back to project list`,
+					value: 'back-to-projects',
+				});
+			} else {
+				// In single-project mode, show 'Exit'
+				menuItems.push({
+					type: 'common',
+					label: `Q ${MENU_ICONS.EXIT} Exit`,
+					value: 'exit',
+				});
+			}
+		}
+		setItems(menuItems);
+
+		// Ensure highlighted worktree path is valid for hotkey support
+		setHighlightedWorktreePath(prev => {
+			if (
+				prev &&
+				menuItems.some(
+					item => item.type === 'worktree' && item.worktree.path === prev,
+				)
+			) {
+				return prev;
+			}
+			const first = menuItems.find(item => item.type === 'worktree');
+			if (first && first.type === 'worktree') {
+				setHighlightedSession(first.session);
+				return first.worktree.path;
+			}
+			setHighlightedSession(undefined);
+			return null;
+		});
+	}, [
+		worktrees,
+		sessions,
+		defaultBranch,
+		projectName,
+		multiProject,
+		recentProjects,
+		searchQuery,
+		isSearchMode,
+		stateFilter,
+		autoApprovalToggleCounter,
+		sessionManager,
+		worktreeConfig.sortByLastSession,
+	]);
+
+	// Handle hotkeys
+	useInput((input, key) => {
+		// Skip in test environment to avoid stdin.ref error
+		if (!process.stdin.setRawMode) {
+			return;
+		}
+
+		// Dismiss error on any key press when error is shown
+		if (error && onDismissError) {
+			onDismissError();
+			return;
+		}
+
+		// Dismiss load error on any key press when load error is shown
+		if (loadError) {
+			setLoadError(null);
+			return;
+		}
+
+		// Don't process other keys if in search mode (handled by useSearchMode)
+		if (isSearchMode) {
+			return;
+		}
+
+		// Cycle the session-state filter: Tab forward, Shift+Tab backward.
+		if (key.tab) {
+			setStateFilter(prev =>
+				cycleSessionStateFilter(prev, key.shift ? 'prev' : 'next'),
+			);
+			return;
+		}
+
+		const keyPressed = input.toLowerCase();
+
+		// Handle number keys 0-9 for worktree selection
+		if (/^[0-9]$/.test(keyPressed)) {
+			const index = parseInt(keyPressed);
+			// Get filtered worktree items
+			const worktreeItems = items.filter(item => item.type === 'worktree');
+			const projectItems = items.filter(item => item.type === 'project');
+
+			// Check if it's a worktree
+			if (index < worktreeItems.length && worktreeItems[index]) {
+				onMenuAction({
+					type: 'selectWorktree',
+					worktree: worktreeItems[index].worktree,
+					session: worktreeItems[index].session,
+				});
+				return;
+			}
+
+			// Check if it's a recent project (when worktrees < 10)
+			if (worktreeItems.length < 10) {
+				const projectIndex = index - worktreeItems.length;
+				if (
+					projectIndex >= 0 &&
+					projectIndex < projectItems.length &&
+					projectItems[projectIndex]
+				) {
+					handleSelect(projectItems[projectIndex]);
+				}
+			}
+			return;
+		}
+
+		switch (keyPressed) {
+			case 'a':
+				// Toggle auto-approval for the currently highlighted worktree
+				if (configReader.isAutoApprovalEnabled() && highlightedWorktreePath) {
+					sessionManager.toggleAutoApprovalForWorktree(highlightedWorktreePath);
+					setAutoApprovalToggleCounter(c => c + 1);
+				}
+				break;
+			case ' ':
+				// Open session actions for highlighted session
+				if (highlightedSession && highlightedWorktreePath) {
+					onMenuAction({
+						type: 'sessionActions',
+						session: highlightedSession,
+						worktreePath: highlightedWorktreePath,
+					});
+				}
+				break;
+			case 'n':
+				onMenuAction({type: 'newWorktree'});
+				break;
+			case 'm':
+				onMenuAction({type: 'mergeWorktree'});
+				break;
+			case 'd':
+				onMenuAction({type: 'deleteWorktree'});
+				break;
+			case 'p':
+				// Trigger project configuration action (only in single-project mode)
+				if (!multiProject) {
+					onMenuAction({type: 'configuration', scope: 'project'});
+				}
+				break;
+			case 'c':
+				onMenuAction({type: 'configuration', scope: 'global'});
+				break;
+			case 'b':
+				// In multi-project mode, go back to project list
+				if (projectName) {
+					onMenuAction({type: 'exit'});
+				}
+				break;
+			case 'x':
+				if (!projectName) {
+					onMenuAction({type: 'exit'});
+				}
+				break;
+			case 'q':
+				// Trigger exit action (only in single-project mode)
+				if (!projectName) {
+					onMenuAction({type: 'exit'});
+				}
+				break;
+		}
+	});
+
+	const handleSelect = (item: MenuItem) => {
+		if (item.value.endsWith('-separator') || item.value === 'recent-header') {
+			// Do nothing for separators and headers
+		} else if (item.type === 'project') {
+			if (onSelectRecentProject) {
+				const project: GitProject = {
+					path: item.recentProject.path,
+					name: item.recentProject.name,
+					relativePath: item.recentProject.path,
+					isValid: true,
+				};
+				onSelectRecentProject(project);
+			}
+		} else if (item.value === 'cost-dashboard') {
+			onMenuAction({type: 'costDashboard'});
+		} else if (item.value === 'summaries') {
+			onMenuAction({type: 'summaries'});
+		} else if (item.value === 'new-worktree') {
+			onMenuAction({type: 'newWorktree'});
+		} else if (item.value === 'merge-worktree') {
+			onMenuAction({type: 'mergeWorktree'});
+		} else if (item.value === 'delete-worktree') {
+			onMenuAction({type: 'deleteWorktree'});
+		} else if (item.value === 'configuration') {
+			onMenuAction({type: 'configuration', scope: 'global'});
+		} else if (item.value === 'configuration-project') {
+			onMenuAction({type: 'configuration', scope: 'project'});
+		} else if (item.value === 'configuration-global') {
+			onMenuAction({type: 'configuration', scope: 'global'});
+		} else if (item.value === 'exit' || item.value === 'back-to-projects') {
+			onMenuAction({type: 'exit'});
+		} else if (item.type === 'worktree') {
+			onMenuAction({
+				type: 'selectWorktree',
+				worktree: item.worktree,
+				session: item.session,
+			});
+		}
+	};
+
+	return (
+		<Box flexDirection="column">
+			<Box marginBottom={1} flexDirection="column">
+				<Text bold color="green">
+					CCManager - Claude Code Worktree Manager v{version}
+				</Text>
+				{projectName && (
+					<Text bold color="green">
+						{projectName}
+					</Text>
+				)}
+			</Box>
+
+			<Box marginBottom={1}>
+				<Text dimColor>
+					Select a worktree to start or resume a Claude Code session:
+				</Text>
+			</Box>
+
+			{/* Active filter indicators, shown directly above the list they narrow */}
+			{((searchQuery && !isSearchMode) || stateFilter !== 'all') && (
+				<Box marginBottom={1} flexDirection="column">
+					{searchQuery && !isSearchMode && (
+						<Text>
+							<Text dimColor>Filtered: </Text>
+							<Text color="cyan" bold>
+								&quot;{searchQuery}&quot;
+							</Text>
+						</Text>
+					)}
+					{stateFilter !== 'all' && (
+						<Text>
+							<Text dimColor>State filter: </Text>
+							<Text color="cyan" bold>
+								{getSessionStateFilterLabel(stateFilter)}
+							</Text>
+							<Text dimColor> (Tab to cycle, back to All clears it)</Text>
+						</Text>
+					)}
+				</Box>
+			)}
+
+			<SearchableList
+				isSearchMode={isSearchMode}
+				searchQuery={searchQuery}
+				onSearchQueryChange={setSearchQuery}
+				selectedIndex={selectedIndex}
+				items={items}
+				limit={limit}
+				placeholder="Type to filter worktrees..."
+				noMatchMessage="No worktrees match your search"
+			>
+				<SelectInput
+					items={items}
+					onSelect={raw => {
+						const item = items.find(i => i.value === raw?.value);
+						if (!item) return;
+						handleSelect(item);
+					}}
+					onHighlight={raw => {
+						const item = items.find(i => i.value === raw?.value);
+						if (!item) return;
+						if (item.type === 'worktree') {
+							setHighlightedWorktreePath(item.worktree.path);
+							setHighlightedSession(item.session);
+						}
+					}}
+					isFocused={!error}
+					initialIndex={selectedIndex}
+					limit={limit}
+				/>
+			</SearchableList>
+
+			{(error || loadError) && (
+				<Box marginTop={1} paddingX={1} borderStyle="round" borderColor="red">
+					<Box flexDirection="column">
+						<Text color="red" bold>
+							Error: {error || loadError}
+						</Text>
+						<Text color="gray" dimColor>
+							Press any key to dismiss
+						</Text>
+					</Box>
+				</Box>
+			)}
+
+			<Box marginTop={1} flexDirection="column">
+				<Text dimColor>
+					Status: {STATUS_ICONS.BUSY} {STATUS_LABELS.BUSY}{' '}
+					{STATUS_ICONS.WAITING} {STATUS_LABELS.WAITING} {STATUS_ICONS.IDLE}{' '}
+					{STATUS_LABELS.IDLE}
+					{configReader.isAutoApprovalEnabled() && (
+						<>
+							{' | '}
+							<Text color="green">Auto Approval Enabled</Text>
+						</>
+					)}
+				</Text>
+				<Text dimColor>
+					{isSearchMode
+						? 'Search Mode: Type to filter, Enter to exit search, ESC to exit search'
+						: searchQuery
+							? `Controls: ↑↓ Navigate Enter Select | /-Search ESC-Clear 0-9 Quick Select Tab-State Filter Space-Session actions (session rows only) N-New M-Merge D-Delete ${
+									configReader.isAutoApprovalEnabled() ? 'A-AutoApproval ' : ''
+								}${
+									multiProject ? 'C-Config' : 'P-ProjConfig C-GlobalConfig'
+								} ${projectName ? 'B-Back' : 'Q-Quit'}`
+							: `Controls: ↑↓ Navigate Enter Select | Hotkeys: 0-9 Quick Select /-Search Tab-State Filter Space-Session actions (session rows only) N-New M-Merge D-Delete ${
+									configReader.isAutoApprovalEnabled() ? 'A-AutoApproval ' : ''
+								}${
+									multiProject ? 'C-Config' : 'P-ProjConfig C-GlobalConfig'
+								} ${projectName ? 'B-Back' : 'Q-Quit'}`}
+				</Text>
+			</Box>
+		</Box>
+	);
+};
+
+export default Menu;

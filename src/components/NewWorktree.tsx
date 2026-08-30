@@ -1,0 +1,801 @@
+import React, {useState, useMemo, useEffect} from 'react';
+import {Box, Text, useInput} from 'ink';
+import TextInputWrapper from './TextInputWrapper.js';
+import SelectInput from 'ink-select-input';
+import {shortcutManager} from '../services/shortcutManager.js';
+import {configReader} from '../services/config/configReader.js';
+import {generateWorktreeDirectory} from '../utils/worktreeUtils.js';
+import {WorktreeService} from '../services/worktreeService.js';
+import {useSearchMode} from '../hooks/useSearchMode.js';
+import {useDynamicLimit} from '../hooks/useDynamicLimit.js';
+import SearchableList from './SearchableList.js';
+import RemoteBranchSelector from './RemoteBranchSelector.js';
+import {Effect} from 'effect';
+import type {AppError} from '../types/errors.js';
+import type {RemoteBranchMatch} from '../types/index.js';
+import {
+	describePromptInjection,
+	getPromptInjectionMethod,
+} from '../utils/presetPrompt.js';
+
+interface NewWorktreeProps {
+	projectPath?: string;
+	onComplete: (request: NewWorktreeRequest) => void;
+	onCancel: () => void;
+}
+
+export type NewWorktreeRequest =
+	| {
+			creationMode: 'manual';
+			path: string;
+			branch: string;
+			baseBranch: string;
+			copySessionData: boolean;
+			copyClaudeDirectory: boolean;
+	  }
+	| {
+			creationMode: 'prompt';
+			path: string;
+			projectPath: string;
+			autoDirectoryPattern?: string;
+			baseBranch: string;
+			presetId: string;
+			initialPrompt: string;
+			copySessionData: boolean;
+			copyClaudeDirectory: boolean;
+			branch?: never;
+	  };
+
+type Step =
+	| 'path'
+	| 'base-branch'
+	| 'remote-branch-confirm'
+	| 'creation-mode'
+	| 'branch-strategy'
+	| 'branch'
+	| 'auto-preset'
+	| 'auto-prompt'
+	| 'copy-settings'
+	| 'copy-session';
+
+interface BranchItem {
+	label: string;
+	value: string;
+}
+
+const NewWorktree: React.FC<NewWorktreeProps> = ({
+	projectPath,
+	onComplete,
+	onCancel,
+}) => {
+	const worktreeConfig = configReader.getWorktreeConfig();
+	const presetsConfig = configReader.getCommandPresets();
+	const isAutoDirectory = worktreeConfig.autoDirectory;
+	const isAutoUseDefaultBranch = worktreeConfig.autoUseDefaultBranch ?? false;
+	const includeRemoteBranches = worktreeConfig.includeRemoteBranches ?? false;
+
+	const getInitialStep = (): Step => {
+		if (isAutoDirectory) {
+			return 'base-branch';
+		}
+
+		return 'path';
+	};
+
+	const [step, setStep] = useState<Step>(getInitialStep());
+	const [path, setPath] = useState('');
+	const [branch, setBranch] = useState('');
+	const [baseBranch, setBaseBranch] = useState('');
+	// Short branch name to use when creating a local branch from baseBranch
+	// (differs from baseBranch when baseBranch is a remote ref like "origin/x")
+	const [baseBranchLocalName, setBaseBranchLocalName] = useState('');
+	const [ambiguousBase, setAmbiguousBase] = useState<{
+		branchName: string;
+		matches: RemoteBranchMatch[];
+	} | null>(null);
+	const [copyClaudeDirectory, setCopyClaudeDirectory] = useState(true);
+	const [copySessionData, setCopySessionData] = useState(
+		worktreeConfig.copySessionData ?? true,
+	);
+	const [selectedPresetId, setSelectedPresetId] = useState(
+		presetsConfig.defaultPresetId,
+	);
+	const [initialPrompt, setInitialPrompt] = useState('');
+
+	const [isLoadingBranches, setIsLoadingBranches] = useState(true);
+	const [branchLoadError, setBranchLoadError] = useState<string | null>(null);
+	const [branches, setBranches] = useState<string[]>([]);
+	const [remoteBranches, setRemoteBranches] = useState<string[]>([]);
+	const [defaultBranch, setDefaultBranch] = useState<string>('main');
+
+	const worktreeService = useMemo(
+		() => new WorktreeService(projectPath),
+		[projectPath],
+	);
+
+	useEffect(() => {
+		let cancelled = false;
+		const service = worktreeService;
+
+		const loadBranches = async () => {
+			const branchesEffect = includeRemoteBranches
+				? service.getBranchesWithRemotesEffect()
+				: Effect.map(service.getAllBranchesEffect(), (list: string[]) => ({
+						local: list,
+						remote: [] as string[],
+					}));
+
+			const workflow = Effect.all(
+				[branchesEffect, service.getDefaultBranchEffect()],
+				{concurrency: 2},
+			);
+
+			const result = await Effect.runPromise(
+				Effect.match(workflow, {
+					onFailure: (error: AppError) => ({
+						type: 'error' as const,
+						message: formatError(error),
+					}),
+					onSuccess: ([branchData, defaultBr]: [
+						{local: string[]; remote: string[]},
+						string,
+					]) => ({
+						type: 'success' as const,
+						local: branchData.local,
+						remote: branchData.remote,
+						defaultBranch: defaultBr,
+					}),
+				}),
+			);
+
+			if (!cancelled) {
+				if (result.type === 'error') {
+					setBranchLoadError(result.message);
+					setIsLoadingBranches(false);
+				} else {
+					setBranches(result.local);
+					setRemoteBranches(result.remote);
+					setDefaultBranch(result.defaultBranch);
+					setIsLoadingBranches(false);
+
+					// When the default branch is ambiguous across remotes we can't
+					// pick one silently, so keep the base-branch step and let the
+					// user choose.
+					const resolution =
+						isAutoUseDefaultBranch && result.defaultBranch
+							? service.resolveBaseBranch(result.defaultBranch)
+							: null;
+					if (resolution && resolution.kind !== 'ambiguous') {
+						setBaseBranch(resolution.ref);
+						setBaseBranchLocalName(resolution.localName);
+						setStep(currentStep =>
+							currentStep === 'base-branch' ? 'creation-mode' : currentStep,
+						);
+					}
+				}
+			}
+		};
+
+		loadBranches().catch(err => {
+			if (!cancelled) {
+				setBranchLoadError(`Unexpected error loading branches: ${String(err)}`);
+				setIsLoadingBranches(false);
+			}
+		});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [worktreeService, isAutoUseDefaultBranch, includeRemoteBranches]);
+
+	const allBranchItems: BranchItem[] = useMemo(() => {
+		const defaultRemoteSuffix = `/${defaultBranch}`;
+		const defaultRemotes = remoteBranches.filter(br =>
+			br.endsWith(defaultRemoteSuffix),
+		);
+		const otherRemotes = remoteBranches.filter(
+			br => !br.endsWith(defaultRemoteSuffix),
+		);
+
+		return [
+			{label: `${defaultBranch} (default)`, value: defaultBranch},
+			...defaultRemotes.map(br => ({
+				label: `${br} (default remote)`,
+				value: br,
+			})),
+			...branches
+				.filter(br => br !== defaultBranch)
+				.map(br => ({label: br, value: br})),
+			...otherRemotes.map(br => ({label: br, value: br})),
+		];
+	}, [branches, remoteBranches, defaultBranch]);
+
+	const {isSearchMode, searchQuery, selectedIndex, setSearchQuery} =
+		useSearchMode(allBranchItems.length, {
+			isDisabled: step !== 'base-branch',
+		});
+
+	const limit = useDynamicLimit({
+		fixedRows: includeRemoteBranches ? 10 : 8,
+		isSearchMode,
+		hasError: !!branchLoadError,
+	});
+
+	const branchItems = useMemo(() => {
+		if (!searchQuery) return allBranchItems;
+		return allBranchItems.filter(item =>
+			item.value.toLowerCase().includes(searchQuery.toLowerCase()),
+		);
+	}, [allBranchItems, searchQuery]);
+
+	const presetItems = useMemo(
+		() =>
+			presetsConfig.presets.map(preset => ({
+				label: `${preset.name}${
+					preset.id === presetsConfig.defaultPresetId ? ' (default)' : ''
+				}\n    Command: ${preset.command}${
+					preset.args?.length ? ` ${preset.args.join(' ')}` : ''
+				}`,
+				value: preset.id,
+			})),
+		[presetsConfig.defaultPresetId, presetsConfig.presets],
+	);
+
+	const selectedPreset = useMemo(
+		() =>
+			presetsConfig.presets.find(preset => preset.id === selectedPresetId) ||
+			presetsConfig.presets[0],
+		[selectedPresetId, presetsConfig.presets],
+	);
+
+	useInput((input, key) => {
+		if (step === 'remote-branch-confirm') {
+			// RemoteBranchSelector handles its own cancel shortcut (returns to
+			// the base-branch list); don't also cancel the whole wizard here.
+			return;
+		}
+
+		if (shortcutManager.matchesShortcut('cancel', input, key)) {
+			onCancel();
+		}
+
+		if (step === 'base-branch' && isSearchMode) {
+			return;
+		}
+	});
+
+	/**
+	 * Resolves the selected base branch right away. Returns true when the
+	 * selection is settled; returns false when the branch exists on multiple
+	 * remotes, in which case the remote-branch-confirm step is shown so the
+	 * user can disambiguate immediately (instead of failing later when the
+	 * worktree is actually created).
+	 */
+	const applyBaseBranchSelection = (name: string): boolean => {
+		const resolution = worktreeService.resolveBaseBranch(name);
+		if (resolution.kind === 'ambiguous') {
+			setAmbiguousBase({
+				branchName: resolution.branchName,
+				matches: resolution.matches,
+			});
+			setStep('remote-branch-confirm');
+			return false;
+		}
+		setBaseBranch(resolution.ref);
+		setBaseBranchLocalName(resolution.localName);
+		return true;
+	};
+
+	const handlePathSubmit = (value: string) => {
+		if (!value.trim()) return;
+
+		setPath(value.trim());
+		if (isAutoUseDefaultBranch && defaultBranch) {
+			if (applyBaseBranchSelection(defaultBranch)) {
+				setStep('creation-mode');
+			}
+		} else {
+			setStep('base-branch');
+		}
+	};
+
+	const handleBaseBranchSelect = (item: {label: string; value: string}) => {
+		if (applyBaseBranchSelection(item.value)) {
+			setStep('creation-mode');
+		}
+	};
+
+	const handleAmbiguousBaseSelect = (selectedRemoteRef: string) => {
+		if (!ambiguousBase) return;
+		setBaseBranch(selectedRemoteRef);
+		setBaseBranchLocalName(ambiguousBase.branchName);
+		setAmbiguousBase(null);
+		setStep('creation-mode');
+	};
+
+	const handleAmbiguousBaseCancel = () => {
+		setAmbiguousBase(null);
+		setStep('base-branch');
+	};
+
+	const handleCreationModeSelect = (item: {label: string; value: string}) => {
+		if (item.value === 'manual') {
+			setStep('branch-strategy');
+			return;
+		}
+
+		setStep('auto-preset');
+	};
+
+	const handleBranchStrategySelect = (item: {label: string; value: string}) => {
+		const useExisting = item.value === 'existing';
+		if (useExisting) {
+			// Use the short branch name: when baseBranch is a remote ref
+			// (e.g. "origin/feature/x"), the local branch to attach/create is
+			// "feature/x", not a branch literally named "origin/feature/x".
+			setBranch(baseBranchLocalName || baseBranch);
+			setStep('copy-settings');
+		} else {
+			setStep('branch');
+		}
+	};
+
+	const handleBranchSubmit = (value: string) => {
+		if (!value.trim()) return;
+
+		setBranch(value.trim());
+		setStep('copy-settings');
+	};
+
+	const handlePresetSelect = (item: {label: string; value: string}) => {
+		setSelectedPresetId(item.value);
+		setStep('auto-prompt');
+	};
+
+	const handlePromptSubmit = (value: string) => {
+		if (!value.trim()) return;
+
+		setInitialPrompt(value.trim());
+		setStep('copy-settings');
+	};
+
+	const handleCopySettingsSelect = (item: {label: string; value: boolean}) => {
+		setCopyClaudeDirectory(item.value);
+		setStep('copy-session');
+	};
+
+	const getResolvedPath = (): string => {
+		if (!isAutoDirectory) {
+			return path;
+		}
+
+		const branchForPath =
+			step === 'copy-session' && branch ? branch : 'generated-from-prompt';
+
+		return generateWorktreeDirectory(
+			projectPath || process.cwd(),
+			branchForPath,
+			worktreeConfig.autoDirectoryPattern,
+		);
+	};
+
+	const handleCopySessionSelect = (item: {label: string; value: string}) => {
+		const shouldCopy = item.value === 'yes';
+		const resolvedPath = getResolvedPath();
+
+		setCopySessionData(shouldCopy);
+
+		if (step !== 'copy-session') {
+			return;
+		}
+
+		if (initialPrompt && selectedPresetId) {
+			onComplete({
+				creationMode: 'prompt',
+				path: isAutoDirectory ? projectPath || process.cwd() : resolvedPath,
+				projectPath: projectPath || process.cwd(),
+				autoDirectoryPattern: isAutoDirectory
+					? worktreeConfig.autoDirectoryPattern
+					: undefined,
+				baseBranch,
+				presetId: selectedPresetId,
+				initialPrompt,
+				copySessionData: shouldCopy,
+				copyClaudeDirectory,
+			});
+			return;
+		}
+
+		onComplete({
+			creationMode: 'manual',
+			path: resolvedPath,
+			branch,
+			baseBranch,
+			copySessionData: shouldCopy,
+			copyClaudeDirectory,
+		});
+	};
+
+	const generatedPath = useMemo(() => {
+		if (!isAutoDirectory) {
+			return '';
+		}
+
+		const branchForPath =
+			branch || (initialPrompt ? 'generated-from-prompt' : '');
+		if (!branchForPath) {
+			return '';
+		}
+
+		return generateWorktreeDirectory(
+			projectPath || process.cwd(),
+			branchForPath,
+			worktreeConfig.autoDirectoryPattern,
+		);
+	}, [
+		isAutoDirectory,
+		branch,
+		initialPrompt,
+		worktreeConfig.autoDirectoryPattern,
+		projectPath,
+	]);
+
+	const formatError = (error: AppError): string => {
+		switch (error._tag) {
+			case 'GitError':
+				return `Git command failed: ${error.command} (exit ${error.exitCode})\n${error.stderr}`;
+			case 'FileSystemError':
+				return `File ${error.operation} failed for ${error.path}: ${error.cause}`;
+			case 'ConfigError':
+				return `Configuration error (${error.reason}): ${error.details}`;
+			case 'ProcessError':
+				return `Process error: ${error.message}`;
+			case 'ValidationError':
+				return `Validation failed for ${error.field}: ${error.constraint}`;
+		}
+	};
+
+	if (isLoadingBranches) {
+		return (
+			<Box flexDirection="column">
+				<Box marginBottom={1}>
+					<Text bold color="green">
+						Create New Worktree
+					</Text>
+				</Box>
+				<Box>
+					<Text>Loading branches...</Text>
+				</Box>
+				<Box marginTop={1}>
+					<Text dimColor>
+						Press {shortcutManager.getShortcutDisplay('cancel')} to cancel
+					</Text>
+				</Box>
+			</Box>
+		);
+	}
+
+	if (branchLoadError) {
+		return (
+			<Box flexDirection="column">
+				<Box marginBottom={1}>
+					<Text bold color="green">
+						Create New Worktree
+					</Text>
+				</Box>
+				<Box marginBottom={1}>
+					<Text color="red">Error loading branches:</Text>
+				</Box>
+				<Box marginBottom={1}>
+					<Text color="red">{branchLoadError}</Text>
+				</Box>
+				<Box marginTop={1}>
+					<Text dimColor>
+						Press {shortcutManager.getShortcutDisplay('cancel')} to go back
+					</Text>
+				</Box>
+			</Box>
+		);
+	}
+
+	const promptHandlingText = selectedPreset
+		? describePromptInjection(selectedPreset)
+		: '';
+	const promptMethod = selectedPreset
+		? getPromptInjectionMethod(selectedPreset)
+		: 'stdin';
+
+	return (
+		<Box flexDirection="column">
+			<Box marginBottom={1}>
+				<Text bold color="green">
+					Create New Worktree
+				</Text>
+			</Box>
+
+			{step === 'path' && !isAutoDirectory ? (
+				<Box flexDirection="column">
+					<Box marginBottom={1}>
+						<Text>Enter worktree path (relative to repository root):</Text>
+					</Box>
+					<Box>
+						<Text color="cyan">{'> '}</Text>
+						<TextInputWrapper
+							value={path}
+							onChange={setPath}
+							onSubmit={handlePathSubmit}
+							placeholder="e.g., ../myproject-feature"
+						/>
+					</Box>
+					<Box marginTop={1}>
+						<Text dimColor>
+							{
+								'Tip: Enable "Auto Directory" in settings to generate paths automatically from branch names.'
+							}
+						</Text>
+					</Box>
+				</Box>
+			) : null}
+
+			{step === 'base-branch' && (
+				<Box flexDirection="column">
+					<Box marginBottom={1}>
+						<Text>Select base branch for the worktree:</Text>
+					</Box>
+					<SearchableList
+						isSearchMode={isSearchMode}
+						searchQuery={searchQuery}
+						onSearchQueryChange={setSearchQuery}
+						selectedIndex={selectedIndex}
+						items={branchItems}
+						limit={limit}
+						placeholder="Type to filter branches..."
+						noMatchMessage="No branches match your search"
+					>
+						<SelectInput
+							items={branchItems}
+							onSelect={handleBaseBranchSelect}
+							initialIndex={selectedIndex}
+							limit={limit}
+							isFocused={!isSearchMode}
+						/>
+					</SearchableList>
+					{!isSearchMode && (
+						<Box marginTop={1}>
+							<Text dimColor>Press / to search</Text>
+						</Box>
+					)}
+					{includeRemoteBranches && (
+						<Box marginTop={1}>
+							<Text dimColor>
+								Tip: If the branch list feels slow, disable &quot;Include Remote
+								Branches&quot; in Configuration → Configure Worktree Settings.
+							</Text>
+						</Box>
+					)}
+				</Box>
+			)}
+
+			{step === 'remote-branch-confirm' && ambiguousBase && (
+				<RemoteBranchSelector
+					branchName={ambiguousBase.branchName}
+					matches={ambiguousBase.matches}
+					onSelect={handleAmbiguousBaseSelect}
+					onCancel={handleAmbiguousBaseCancel}
+				/>
+			)}
+
+			{step === 'creation-mode' && (
+				<Box flexDirection="column">
+					<Box marginBottom={1}>
+						<Text>
+							Base branch: <Text color="cyan">{baseBranch}</Text>
+						</Text>
+					</Box>
+					<Box marginBottom={1}>
+						<Text>How do you want to create the new worktree?</Text>
+					</Box>
+					<SelectInput
+						items={[
+							{
+								label: '1. Choose the branch name yourself',
+								value: 'manual',
+							},
+							{
+								label:
+									'2. Enter a prompt first and let Claude decide the branch name',
+								value: 'prompt',
+							},
+						]}
+						onSelect={handleCreationModeSelect}
+						initialIndex={0}
+					/>
+				</Box>
+			)}
+
+			{step === 'branch-strategy' && (
+				<Box flexDirection="column">
+					<Box marginBottom={1}>
+						<Text>
+							Base branch: <Text color="cyan">{baseBranch}</Text>
+						</Text>
+					</Box>
+					<Box marginBottom={1}>
+						<Text>Choose branch creation strategy:</Text>
+					</Box>
+					<SelectInput
+						items={[
+							{
+								label: 'Create new branch from base branch',
+								value: 'new',
+							},
+							{
+								label: 'Use existing base branch',
+								value: 'existing',
+							},
+						]}
+						onSelect={handleBranchStrategySelect}
+						initialIndex={0}
+					/>
+				</Box>
+			)}
+
+			{step === 'branch' && (
+				<Box flexDirection="column">
+					<Box marginBottom={1}>
+						<Text>
+							Enter new branch name (will be created from{' '}
+							<Text color="cyan">{baseBranch}</Text>):
+						</Text>
+					</Box>
+					<Box>
+						<Text color="cyan">{'> '}</Text>
+						<TextInputWrapper
+							value={branch}
+							onChange={setBranch}
+							onSubmit={handleBranchSubmit}
+							placeholder="e.g., feature/new-feature"
+						/>
+					</Box>
+					{isAutoDirectory && generatedPath && (
+						<Box marginTop={1}>
+							<Text dimColor>
+								Worktree will be created at:{' '}
+								<Text color="green">{generatedPath}</Text>
+							</Text>
+						</Box>
+					)}
+				</Box>
+			)}
+
+			{step === 'auto-preset' && (
+				<Box flexDirection="column">
+					<Box marginBottom={1}>
+						<Text>Select the preset to use for the first session:</Text>
+					</Box>
+					<SelectInput
+						items={presetItems}
+						onSelect={handlePresetSelect}
+						initialIndex={Math.max(
+							0,
+							presetItems.findIndex(item => item.value === selectedPresetId),
+						)}
+					/>
+				</Box>
+			)}
+
+			{step === 'auto-prompt' && selectedPreset && (
+				<Box flexDirection="column">
+					<Box marginBottom={1}>
+						<Text>
+							Preset: <Text color="cyan">{selectedPreset.name}</Text>
+						</Text>
+					</Box>
+					<Box marginBottom={1}>
+						<Text>Enter the prompt for the new session:</Text>
+					</Box>
+					<Box marginBottom={1}>
+						<Text dimColor>{promptHandlingText}</Text>
+					</Box>
+					<Box marginBottom={1}>
+						<Text dimColor>
+							Examples: Claude/Codex use the final argument, OpenCode uses
+							`--prompt`, and other commands may receive the prompt over stdin.
+						</Text>
+					</Box>
+					<Box marginBottom={1}>
+						<Text color="yellow">
+							Automatic branch naming requires the `claude` command in your
+							PATH.
+						</Text>
+					</Box>
+					<Box>
+						<Text color="cyan">{'> '}</Text>
+						<TextInputWrapper
+							value={initialPrompt}
+							onChange={setInitialPrompt}
+							onSubmit={handlePromptSubmit}
+							placeholder="Describe what you want the agent to do"
+						/>
+					</Box>
+					<Box marginTop={1}>
+						<Text dimColor>
+							Prompt delivery mode for this preset:{' '}
+							<Text color="green">{promptMethod}</Text>
+						</Text>
+					</Box>
+				</Box>
+			)}
+
+			{step === 'copy-settings' && (
+				<Box flexDirection="column">
+					<Box marginBottom={1}>
+						<Text>
+							Copy .claude directory from base branch (
+							<Text color="cyan">{baseBranch}</Text>)?
+						</Text>
+					</Box>
+					{initialPrompt ? (
+						<Box marginBottom={1}>
+							<Text dimColor>
+								The branch name will be generated automatically right before the
+								worktree is created.
+							</Text>
+						</Box>
+					) : null}
+					<SelectInput
+						items={[
+							{
+								label: 'Yes - Copy .claude directory from base branch',
+								value: true,
+							},
+							{label: 'No - Start without .claude directory', value: false},
+						]}
+						onSelect={handleCopySettingsSelect}
+						initialIndex={0}
+					/>
+				</Box>
+			)}
+
+			{step === 'copy-session' && (
+				<Box flexDirection="column">
+					<Box marginBottom={1}>
+						<Text>Copy Claude Code session data to the new worktree?</Text>
+					</Box>
+					<Box marginBottom={1}>
+						<Text dimColor>
+							This will copy conversation history and context from the current
+							worktree.
+						</Text>
+					</Box>
+					{isAutoDirectory && generatedPath ? (
+						<Box marginBottom={1}>
+							<Text dimColor>
+								Worktree path preview:{' '}
+								<Text color="green">{generatedPath}</Text>
+							</Text>
+						</Box>
+					) : null}
+					<SelectInput
+						items={[
+							{label: '✅ Yes, copy session data', value: 'yes'},
+							{label: '❌ No, start fresh', value: 'no'},
+						]}
+						onSelect={handleCopySessionSelect}
+						initialIndex={copySessionData ? 0 : 1}
+					/>
+				</Box>
+			)}
+
+			{step !== 'remote-branch-confirm' && (
+				<Box marginTop={1}>
+					<Text dimColor>
+						Press {shortcutManager.getShortcutDisplay('cancel')} to cancel
+					</Text>
+				</Box>
+			)}
+		</Box>
+	);
+};
+
+export default NewWorktree;

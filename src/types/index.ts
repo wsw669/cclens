@@ -1,0 +1,375 @@
+import type {IPty} from '../services/bunTerminal.js';
+import type pkg from '@xterm/headless';
+import type {SerializeAddon} from '@xterm/addon-serialize';
+import {GitStatus} from '../utils/gitStatus.js';
+import {Mutex, SessionStateData} from '../utils/mutex.js';
+import type {StateDetector} from '../services/stateDetector/types.js';
+import type {Effect} from 'effect';
+import type {GitError, FileSystemError, ProcessError} from './errors.js';
+
+export type Terminal = InstanceType<typeof pkg.Terminal>;
+
+export type SessionState =
+	| 'idle'
+	| 'busy'
+	| 'waiting_input'
+	| 'pending_auto_approval';
+
+export type StateDetectionStrategy = 'claude';
+
+export interface Worktree {
+	path: string;
+	branch?: string;
+	isMainWorktree: boolean;
+	hasSession: boolean;
+	gitStatus?: GitStatus;
+	gitStatusError?: string;
+	lastCommitDate?: Date;
+}
+
+export interface CreateWorktreeResult {
+	worktree: Worktree;
+	postCreationHookError?: ProcessError;
+}
+
+export interface Session {
+	id: string;
+	worktreePath: string;
+	sessionNumber: number; // Auto-incremented per worktree
+	sessionName?: string; // User-assigned name
+	command: string; // The configured command used to launch the session
+	fallbackArgs?: string[]; // Fallback arguments for a single retry when startup fails
+	lastAccessedAt: number; // Timestamp for sorting
+	process: IPty;
+	output: string[]; // Recent output for state detection
+	lastActivity: Date;
+	isActive: boolean;
+	terminal: Terminal; // Virtual terminal for state detection (xterm Terminal instance)
+	serializer: SerializeAddon; // Serialize addon for restoring terminal state
+	restoreScrollbackBaseLine: number; // Oldest normal-buffer line eligible for restore replay
+	stateCheckInterval: NodeJS.Timeout | undefined; // Interval for checking terminal state
+	isPrimaryCommand: boolean; // Track if process was started with main command args
+	presetName: string | undefined; // Name of the command preset used for this session
+	detectionStrategy: StateDetectionStrategy | undefined; // State detection strategy for this session
+	devcontainerConfig: DevcontainerConfig | undefined; // Devcontainer configuration if session runs in container
+	/**
+	 * Mutex-protected session state data.
+	 * Access via stateMutex.runExclusive() or stateMutex.update() to ensure thread-safe operations.
+	 * Contains: state, autoApprovalFailed, autoApprovalReason, autoApprovalAbortController, backgroundTaskCount, teamMemberCount
+	 */
+	stateMutex: Mutex<SessionStateData>;
+	/**
+	 * State detector instance for this session.
+	 * Created once during session initialization based on detectionStrategy.
+	 */
+	stateDetector: StateDetector;
+}
+
+export interface AutoApprovalResponse {
+	needsPermission: boolean;
+	reason?: string;
+}
+
+export type MenuAction =
+	| {type: 'selectWorktree'; worktree: Worktree; session?: Session}
+	| {type: 'newWorktree'}
+	| {type: 'newSession'; worktreePath: string}
+	| {type: 'renameSession'; session: Session}
+	| {type: 'killSession'; sessionId: string}
+	| {
+			type: 'sessionActions';
+			session: Session;
+			worktreePath: string;
+	  }
+	| {type: 'deleteWorktree'}
+	| {type: 'mergeWorktree'}
+	| {type: 'configuration'; scope: ConfigScope}
+	| {type: 'costDashboard'}
+	| {type: 'summaries'}
+	| {type: 'exit'};
+
+export interface SessionManager {
+	sessions: Map<string, Session>;
+	getSessionById(id: string): Session | undefined;
+	getSessionsForWorktree(worktreePath: string): Session[];
+	destroySession(sessionId: string): void;
+	getAllSessions(): Session[];
+	cancelAutoApproval(sessionId: string, reason?: string): void;
+}
+
+export interface ShortcutKey {
+	ctrl?: boolean;
+	alt?: boolean;
+	shift?: boolean;
+	key: string;
+}
+
+export interface ShortcutConfig {
+	returnToMenu: ShortcutKey;
+	cancel: ShortcutKey;
+}
+
+export const DEFAULT_SHORTCUTS: ShortcutConfig = {
+	returnToMenu: {ctrl: true, key: 'e'},
+	cancel: {key: 'escape'},
+};
+
+export interface StatusHook {
+	command: string;
+	enabled: boolean;
+}
+
+export interface StatusHookConfig {
+	idle?: StatusHook;
+	busy?: StatusHook;
+	waiting_input?: StatusHook;
+	pending_auto_approval?: StatusHook;
+}
+
+export interface WorktreeHook {
+	command: string;
+	enabled: boolean;
+}
+
+export interface WorktreeHookConfig {
+	pre_creation?: WorktreeHook;
+	post_creation?: WorktreeHook;
+}
+
+export interface WorktreeConfig {
+	autoDirectory: boolean;
+	autoDirectoryPattern?: string; // Optional pattern for directory generation
+	copySessionData?: boolean; // Whether to copy Claude session data by default
+	sortByLastSession?: boolean; // Whether to sort worktrees by last opened session
+	autoUseDefaultBranch?: boolean; // Whether to automatically use default branch as base branch
+	includeRemoteBranches?: boolean; // Whether to include remote branches in base branch selection
+}
+
+export interface MergeConfig {
+	mergeArgs?: string[]; // Args for git merge (default: ['--no-ff'])
+	rebaseArgs?: string[]; // Args for git rebase (default: [])
+}
+
+export interface CommandPreset {
+	id: string; // Unique identifier for the preset
+	name: string; // User-friendly name for the preset
+	command: string; // The main command to execute
+	args?: string[]; // Arguments to pass to the command
+	fallbackArgs?: string[]; // Fallback arguments if main command fails
+	detectionStrategy?: StateDetectionStrategy; // State detection strategy (defaults to 'claude')
+}
+
+export interface CommandPresetsConfig {
+	presets: CommandPreset[]; // List of available presets
+	defaultPresetId: string; // ID of the default preset to use
+	selectPresetOnStart?: boolean; // Whether to show preset selector before starting session
+}
+
+export interface DevcontainerConfig {
+	upCommand: string; // Command to start devcontainer
+	execCommand: string; // Command to execute in devcontainer
+}
+
+export interface ConfigurationData {
+	shortcuts?: ShortcutConfig;
+	statusHooks?: StatusHookConfig;
+	worktreeHooks?: WorktreeHookConfig;
+	worktree?: WorktreeConfig;
+	commandPresets?: CommandPresetsConfig;
+	mergeConfig?: MergeConfig;
+	autoApproval?: {
+		enabled: boolean; // Whether auto-approval is enabled
+		customCommand?: string; // Custom verification command; must output JSON matching AutoApprovalResponse
+		timeout?: number; // Timeout in seconds for auto-approval verification (default: DEFAULT_TIMEOUT_SECONDS)
+	};
+}
+
+// Per-project configuration support
+export type ConfigScope = 'project' | 'global';
+
+export interface AutoApprovalConfig {
+	enabled: boolean;
+	customCommand?: string;
+	timeout?: number;
+}
+
+export interface ProjectConfigurationData {
+	shortcuts?: ShortcutConfig;
+	statusHooks?: StatusHookConfig;
+	worktreeHooks?: WorktreeHookConfig;
+	worktree?: WorktreeConfig;
+	commandPresets?: CommandPresetsConfig;
+	mergeConfig?: MergeConfig;
+	autoApproval?: AutoApprovalConfig;
+}
+
+/**
+ * Common interface for configuration readers.
+ * Provides read-only access to configuration values.
+ * Implemented by ConfigReader, ConfigEditor, GlobalConfigManager, ProjectConfigManager.
+ */
+export interface IConfigReader {
+	// Shortcuts
+	getShortcuts(): ShortcutConfig | undefined;
+
+	// Status Hooks
+	getStatusHooks(): StatusHookConfig | undefined;
+
+	// Worktree Hooks
+	getWorktreeHooks(): WorktreeHookConfig | undefined;
+
+	// Worktree Config
+	getWorktreeConfig(): WorktreeConfig | undefined;
+
+	// Command Presets
+	getCommandPresets(): CommandPresetsConfig | undefined;
+
+	// Merge Config
+	getMergeConfig(): MergeConfig | undefined;
+
+	// Auto Approval
+	getAutoApprovalConfig(): AutoApprovalConfig | undefined;
+
+	// Reload config from disk
+	reload(): void;
+}
+
+/**
+ * Common interface for configuration editors.
+ * Extends IConfigReader with write capabilities.
+ * Implemented by ConfigEditor, GlobalConfigManager, ProjectConfigManager.
+ */
+export interface IConfigEditor extends IConfigReader {
+	// Shortcuts
+	setShortcuts(value: ShortcutConfig): void;
+
+	// Status Hooks
+	setStatusHooks(value: StatusHookConfig): void;
+
+	// Worktree Hooks
+	setWorktreeHooks(value: WorktreeHookConfig): void;
+
+	// Worktree Config
+	setWorktreeConfig(value: WorktreeConfig): void;
+
+	// Command Presets
+	setCommandPresets(value: CommandPresetsConfig): void;
+
+	// Merge Config
+	setMergeConfig(value: MergeConfig): void;
+
+	// Auto Approval
+	setAutoApprovalConfig(value: AutoApprovalConfig): void;
+}
+
+// Multi-project support interfaces
+export interface GitProject {
+	name: string; // Project name (directory name)
+	path: string; // Full path to the git repository
+	relativePath: string; // Relative path from CCMANAGER_MULTI_PROJECT_ROOT
+	isValid: boolean; // Whether the project is a valid git repository
+	error?: string; // Error message if project is invalid
+}
+
+export interface MultiProjectConfig {
+	enabled: boolean; // Whether multi-project mode is enabled
+	projectsDir: string; // Path to directory containing git projects (from CCMANAGER_MULTI_PROJECT_ROOT)
+	rootMarker?: string; // Optional marker from CCMANAGER_MULTI_PROJECT_ROOT
+}
+
+export type MenuMode = 'normal' | 'multi-project';
+
+export interface IMultiProjectService {
+	discoverProjects(projectsDir: string): Promise<GitProject[]>;
+	validateGitRepository(path: string): Promise<boolean>;
+}
+
+export interface RecentProject {
+	path: string;
+	name: string;
+	lastAccessed: number;
+}
+
+export interface IProjectManager {
+	currentMode: MenuMode;
+	currentProject?: GitProject;
+	projects: GitProject[];
+
+	setMode(mode: MenuMode): void;
+	selectProject(project: GitProject): void;
+	getWorktreeService(projectPath?: string): IWorktreeService;
+
+	// Recent projects methods
+	getRecentProjects(limit?: number): RecentProject[];
+	addRecentProject(project: GitProject): void;
+	clearRecentProjects(): void;
+
+	// Project validation
+	validateGitRepository(path: string): Promise<boolean>;
+}
+
+// Branch resolution types
+export interface RemoteBranchMatch {
+	remote: string;
+	branch: string;
+	fullRef: string; // e.g., "origin/foo/bar-xyz"
+}
+
+/**
+ * Result of classifying a base branch the user picked in the UI.
+ *
+ * - 'local': branch exists locally; `ref` is the branch name as-is.
+ * - 'remote': resolved to exactly one remote-tracking ref; `ref` is the full
+ *   ref (e.g. "origin/foo") and `localName` the short branch name to use when
+ *   creating a local branch from it.
+ * - 'ambiguous': branch exists in multiple remotes; the user must pick one.
+ * - 'none': nothing matched; pass `ref` through and let git report errors.
+ */
+export type BaseBranchResolution =
+	| {kind: 'local'; ref: string; localName: string}
+	| {kind: 'remote'; ref: string; localName: string}
+	| {kind: 'none'; ref: string; localName: string}
+	| {kind: 'ambiguous'; branchName: string; matches: RemoteBranchMatch[]};
+
+export class AmbiguousBranchError extends Error {
+	readonly _tag = 'AmbiguousBranchError' as const;
+	branchName: string;
+	matches: RemoteBranchMatch[];
+
+	constructor(branchName: string, matches: RemoteBranchMatch[]) {
+		super(
+			`Ambiguous branch '${branchName}' found in multiple remotes: ${matches
+				.map(m => m.fullRef)
+				.join(', ')}. Please specify which remote to use.`,
+		);
+		this.name = 'AmbiguousBranchError';
+		this.branchName = branchName;
+		this.matches = matches;
+	}
+}
+
+export interface IWorktreeService {
+	getWorktreesEffect(): Effect.Effect<Worktree[], GitError, never>;
+	getGitRootPath(): string;
+	createWorktreeEffect(
+		worktreePath: string,
+		branch: string,
+		baseBranch: string,
+		copySessionData?: boolean,
+		copyClaudeDirectory?: boolean,
+	): Effect.Effect<
+		CreateWorktreeResult,
+		GitError | FileSystemError | ProcessError | AmbiguousBranchError,
+		never
+	>;
+	deleteWorktreeEffect(
+		worktreePath: string,
+		options?: {deleteBranch?: boolean},
+	): Effect.Effect<void, GitError, never>;
+	mergeWorktreeEffect(
+		sourceBranch: string,
+		targetBranch: string,
+		operation?: 'merge' | 'rebase',
+		mergeConfig?: MergeConfig,
+	): Effect.Effect<void, GitError, never>;
+}
