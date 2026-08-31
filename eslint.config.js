@@ -35,6 +35,7 @@ export default [
         NodeJS: true,
         AbortController: true,
         AbortSignal: true,
+        fetch: true,
         Bun: true
       }
     },

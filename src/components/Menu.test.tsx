@@ -525,8 +525,7 @@ describe('Menu component rendering', () => {
 
 		// Count occurrences of the title
 		const titleCount = (
-			firstRenderOutput?.match(/CCLens - Claude Code Worktree Manager/g) ||
-			[]
+			firstRenderOutput?.match(/CCLens - Claude Code Worktree Manager/g) || []
 		).length;
 		expect(titleCount).toBe(1);
 
@@ -547,8 +546,7 @@ describe('Menu component rendering', () => {
 
 		const secondRenderOutput = lastFrame2();
 		const titleCount2 = (
-			secondRenderOutput?.match(/CCLens - Claude Code Worktree Manager/g) ||
-			[]
+			secondRenderOutput?.match(/CCLens - Claude Code Worktree Manager/g) || []
 		).length;
 		expect(titleCount2).toBe(1);
 	});

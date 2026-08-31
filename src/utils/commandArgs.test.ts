@@ -37,7 +37,6 @@ describe('injectTeammateMode', () => {
 		expect(result).toBe(args);
 	});
 
-
 	it('should not inject for custom command even with claude-like name', () => {
 		const args = ['--config', '/path'];
 		const result = injectTeammateMode('my-custom-claude', args, undefined);

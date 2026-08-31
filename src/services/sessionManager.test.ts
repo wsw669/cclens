@@ -237,7 +237,6 @@ describe('SessionManager', () => {
 			expect(mockPty.write).not.toHaveBeenCalled();
 		});
 
-
 		it('should fall back to default preset if specified preset not found', async () => {
 			// Setup mocks
 			vi.mocked(configReader.getPresetByIdEffect).mockReturnValue(

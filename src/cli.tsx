@@ -8,8 +8,7 @@ import {globalSessionOrchestrator} from './services/globalSessionOrchestrator.js
 
 // Version is injected at build time via --define flag
 declare const CCLENS_VERSION: string;
-const version =
-	typeof CCLENS_VERSION !== 'undefined' ? CCLENS_VERSION : 'dev';
+const version = typeof CCLENS_VERSION !== 'undefined' ? CCLENS_VERSION : 'dev';
 
 const cli = meow(
 	`
@@ -56,9 +55,7 @@ if (!!cli.flags.devcUpCommand !== !!cli.flags.devcExecCommand) {
 
 // Check if we're in a TTY environment
 if (!process.stdin.isTTY || !process.stdout.isTTY) {
-	console.error(
-		'Error: cclens must be run in an interactive terminal (TTY)',
-	);
+	console.error('Error: cclens must be run in an interactive terminal (TTY)');
 	process.exit(1);
 }
 

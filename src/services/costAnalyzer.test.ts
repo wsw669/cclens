@@ -143,7 +143,14 @@ describe('analyzeCosts', () => {
 
 describe('evaluateBudget', () => {
 	const report = {
-		total: {input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 50, messageCount: 1},
+		total: {
+			input: 0,
+			output: 0,
+			cacheRead: 0,
+			cacheWrite: 0,
+			cost: 50,
+			messageCount: 1,
+		},
 		byModel: new Map(),
 		byProject: new Map(),
 		byDate: new Map(),
@@ -153,9 +160,15 @@ describe('evaluateBudget', () => {
 	};
 
 	it('flags ok / warn / over levels', () => {
-		expect(evaluateBudget(report, {monthlyLimit: 200, warnRatio: 0.8}).level).toBe('ok');
-		expect(evaluateBudget(report, {monthlyLimit: 60, warnRatio: 0.8}).level).toBe('warn');
-		expect(evaluateBudget(report, {monthlyLimit: 40, warnRatio: 0.8}).level).toBe('over');
+		expect(
+			evaluateBudget(report, {monthlyLimit: 200, warnRatio: 0.8}).level,
+		).toBe('ok');
+		expect(
+			evaluateBudget(report, {monthlyLimit: 60, warnRatio: 0.8}).level,
+		).toBe('warn');
+		expect(
+			evaluateBudget(report, {monthlyLimit: 40, warnRatio: 0.8}).level,
+		).toBe('over');
 	});
 });
 

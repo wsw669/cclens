@@ -43,9 +43,24 @@ export const DEFAULT_PRICING: Record<string, ModelPrice> = {
 	'glm-5v-turbo': {input: 2, output: 8, cacheRead: 0.5, cacheWrite: 2},
 	'kimi-k2': {input: 2, output: 8, cacheRead: 0.5, cacheWrite: 2},
 	'qwen-max': {input: 2, output: 6, cacheRead: 0.5, cacheWrite: 2},
-	'claude-sonnet-5': {input: 21, output: 105, cacheRead: 2.1, cacheWrite: 26.25},
-	'claude-opus-5': {input: 105, output: 525, cacheRead: 10.5, cacheWrite: 131.25},
-	'claude-haiku-4-5-20251001': {input: 7, output: 35, cacheRead: 0.7, cacheWrite: 8.75},
+	'claude-sonnet-5': {
+		input: 21,
+		output: 105,
+		cacheRead: 2.1,
+		cacheWrite: 26.25,
+	},
+	'claude-opus-5': {
+		input: 105,
+		output: 525,
+		cacheRead: 10.5,
+		cacheWrite: 131.25,
+	},
+	'claude-haiku-4-5-20251001': {
+		input: 7,
+		output: 35,
+		cacheRead: 0.7,
+		cacheWrite: 8.75,
+	},
 };
 
 export function getPricingConfigPath(): string {
@@ -64,7 +79,9 @@ export function loadPricing(): Record<string, ModelPrice> {
 		for (const [model, price] of Object.entries(user)) {
 			merged[model] = {...merged[model], ...price};
 		}
-		logger.info(`Loaded user pricing overrides for ${Object.keys(user).length} model(s)`);
+		logger.info(
+			`Loaded user pricing overrides for ${Object.keys(user).length} model(s)`,
+		);
 	} catch (error) {
 		// ENOENT (first run) or malformed JSON — fall back to defaults silently.
 		logger.debug(`No user pricing config: ${String(error)}`);

@@ -84,10 +84,15 @@ interface AssistantMessageEntry {
 	};
 }
 
-const EMPTY_USAGE: TokenUsage = {input: 0, output: 0, cacheRead: 0, cacheWrite: 0};
-
 export function emptyModelAggregate(): ModelAggregate {
-	return {input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, messageCount: 0};
+	return {
+		input: 0,
+		output: 0,
+		cacheRead: 0,
+		cacheWrite: 0,
+		cost: 0,
+		messageCount: 0,
+	};
 }
 
 /** Locate all session JSONL files under the Claude projects directory. */
@@ -146,10 +151,7 @@ function addInto(target: ModelAggregate, usage: TokenUsage): void {
 	target.messageCount += 1;
 }
 
-function computeCost(
-	usage: TokenUsage,
-	price: ModelPrice,
-): number {
+function computeCost(usage: TokenUsage, price: ModelPrice): number {
 	return (
 		(usage.input * price.input) / 1_000_000 +
 		(usage.output * price.output) / 1_000_000 +

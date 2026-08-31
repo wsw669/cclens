@@ -172,8 +172,7 @@ const ConfigureStatusHooks: React.FC<ConfigureStatusHooksProps> = ({
 
 				<Box marginTop={1}>
 					<Text dimColor>
-						Environment variables available: CCLENS_OLD_STATE,
-						CCLENS_NEW_STATE,
+						Environment variables available: CCLENS_OLD_STATE, CCLENS_NEW_STATE,
 					</Text>
 				</Box>
 				<Box>

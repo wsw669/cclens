@@ -45,12 +45,7 @@ const SUMMARY_PROMPT = `You are summarizing a finished AI coding session. Read t
 Rules: write in the language the session was mostly conducted in; be specific and factual; no markdown, raw JSON only.`;
 
 export function getSummariesDir(): string {
-	return path.join(
-		os.homedir(),
-		'.config',
-		'cclens',
-		'summaries',
-	);
+	return path.join(os.homedir(), '.config', 'cclens', 'summaries');
 }
 
 export function getSummaryPath(project: string, sessionId: string): string {
@@ -61,7 +56,9 @@ export function getSummaryPath(project: string, sessionId: string): string {
 /** Load LLM config from environment, with sensible defaults for CN users. */
 export function loadLlmConfig(): LlmConfig {
 	return {
-		baseUrl: process.env['CCLENS_LLM_BASE_URL'] ?? 'https://api.deepseek.com/anthropic',
+		baseUrl:
+			process.env['CCLENS_LLM_BASE_URL'] ??
+			'https://api.deepseek.com/anthropic',
 		apiKey: process.env['CCLENS_LLM_API_KEY'] ?? '',
 		model: process.env['CCLENS_LLM_MODEL'] ?? 'deepseek-v4-pro',
 	};
@@ -148,9 +145,7 @@ export async function callLlm(
 			role: 'user',
 			content:
 				'Session transcript (truncated to the last messages):\n\n' +
-				transcript
-					.map(m => `${m.role.toUpperCase()}: ${m.text}`)
-					.join('\n\n'),
+				transcript.map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n\n'),
 		},
 		{role: 'user', content: prompt || 'Summarize this session now.'},
 	];
@@ -185,7 +180,9 @@ export async function callLlm(
 }
 
 /** Parse the LLM's JSON summary, tolerating fenced code blocks. */
-export function parseSummaryJson(raw: string): Omit<SessionSummary, 'raw' | 'sessionId' | 'project' | 'generatedAt'> {
+export function parseSummaryJson(
+	raw: string,
+): Omit<SessionSummary, 'raw' | 'sessionId' | 'project' | 'generatedAt'> {
 	const cleaned = raw
 		.replace(/```json/gi, '')
 		.replace(/```/g, '')
@@ -275,10 +272,18 @@ export function renderSummaryMarkdown(summary: SessionSummary): string {
 		'',
 	];
 	if (summary.keyDecisions.length > 0) {
-		lines.push('## Key decisions', ...summary.keyDecisions.map(item => `- ${item}`), '');
+		lines.push(
+			'## Key decisions',
+			...summary.keyDecisions.map(item => `- ${item}`),
+			'',
+		);
 	}
 	if (summary.nextSteps.length > 0) {
-		lines.push('## Next steps', ...summary.nextSteps.map(item => `- ${item}`), '');
+		lines.push(
+			'## Next steps',
+			...summary.nextSteps.map(item => `- ${item}`),
+			'',
+		);
 	}
 	return lines.join('\n');
 }

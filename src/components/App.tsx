@@ -1228,9 +1228,7 @@ const App: React.FC<AppProps> = ({
 	}
 
 	if (view === 'cost-dashboard') {
-		return (
-			<CostDashboard onBack={() => navigateWithClear('menu')} />
-		);
+		return <CostDashboard onBack={() => navigateWithClear('menu')} />;
 	}
 
 	if (view === 'clearing') {

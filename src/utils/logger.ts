@@ -76,13 +76,7 @@ class Logger {
 		// Fallback to ~/.local/state/cclens on Linux, ~/Library/Logs on macOS
 		const homeDir = os.homedir();
 		if (process.platform === 'darwin') {
-			return path.join(
-				homeDir,
-				'Library',
-				'Logs',
-				'cclens',
-				'cclens.log',
-			);
+			return path.join(homeDir, 'Library', 'Logs', 'cclens', 'cclens.log');
 		}
 
 		// Linux and others

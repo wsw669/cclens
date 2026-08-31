@@ -58,30 +58,28 @@ const SummariesView: React.FC<SummariesViewProps> = ({onBack}) => {
 					<Text bold>What was done</Text>
 					{selected.whatWasDone.length > 0 ? (
 						selected.whatWasDone.map((item, i) => (
-							<Text key={i}>  • {item}</Text>
+							<Text key={i}> • {item}</Text>
 						))
 					) : (
-						<Text dimColor>  (none recorded)</Text>
+						<Text dimColor> (none recorded)</Text>
 					)}
 					<Box marginTop={1}>
 						<Text bold>Key decisions</Text>
 					</Box>
 					{selected.keyDecisions.length > 0 ? (
 						selected.keyDecisions.map((item, i) => (
-							<Text key={i}>  • {item}</Text>
+							<Text key={i}> • {item}</Text>
 						))
 					) : (
-						<Text dimColor>  (none recorded)</Text>
+						<Text dimColor> (none recorded)</Text>
 					)}
 					<Box marginTop={1}>
 						<Text bold>Next steps</Text>
 					</Box>
 					{selected.nextSteps.length > 0 ? (
-						selected.nextSteps.map((item, i) => (
-							<Text key={i}>  • {item}</Text>
-						))
+						selected.nextSteps.map((item, i) => <Text key={i}> • {item}</Text>)
 					) : (
-						<Text dimColor>  (none recorded)</Text>
+						<Text dimColor> (none recorded)</Text>
 					)}
 				</Box>
 				<Box marginTop={1}>
@@ -122,9 +120,7 @@ const SummariesView: React.FC<SummariesViewProps> = ({onBack}) => {
 				<SelectInput
 					items={items}
 					onSelect={item => {
-						const found = summaries.find(
-							s => s.sessionId === item.value,
-						);
+						const found = summaries.find(s => s.sessionId === item.value);
 						if (found) setSelected(found);
 					}}
 				/>

@@ -43,11 +43,7 @@ const CostDashboard: React.FC<CostDashboardProps> = ({onBack}) => {
 		const run = async (): Promise<void> => {
 			try {
 				const pricing = loadPricing();
-				const projectsDir = path.join(
-					os.homedir(),
-					'.claude',
-					'projects',
-				);
+				const projectsDir = path.join(os.homedir(), '.claude', 'projects');
 				const report = await analyzeCosts(projectsDir, pricing);
 				if (!cancelled) {
 					setState({status: 'ready', report});
@@ -104,7 +100,11 @@ const CostDashboard: React.FC<CostDashboardProps> = ({onBack}) => {
 	const {report} = state;
 	const budget = evaluateBudget(report, DEFAULT_BUDGET);
 	const budgetColor =
-		budget.level === 'over' ? 'red' : budget.level === 'warn' ? 'yellow' : 'green';
+		budget.level === 'over'
+			? 'red'
+			: budget.level === 'warn'
+				? 'yellow'
+				: 'green';
 
 	const modelRows = [...report.byModel.entries()].sort(
 		(a, b) => b[1].cost - a[1].cost,
@@ -140,8 +140,8 @@ const CostDashboard: React.FC<CostDashboardProps> = ({onBack}) => {
 					</Text>
 				</Text>
 				<Text color={budgetColor}>
-					Budget: {formatCny(budget.spent)} /{' '}
-					{formatCny(budget.limit)} ({Math.round(budget.ratio * 100)}%)
+					Budget: {formatCny(budget.spent)} / {formatCny(budget.limit)} (
+					{Math.round(budget.ratio * 100)}%)
 					{budget.level === 'over'
 						? ' — OVER BUDGET'
 						: budget.level === 'warn'
@@ -150,7 +150,9 @@ const CostDashboard: React.FC<CostDashboardProps> = ({onBack}) => {
 				</Text>
 			</Box>
 
-			<Text bold underline>By model</Text>
+			<Text bold underline>
+				By model
+			</Text>
 			{modelRows.map(([model, agg]) => (
 				<Text key={model}>
 					<Text color="cyan">{model.padEnd(22)}</Text>
@@ -163,7 +165,9 @@ const CostDashboard: React.FC<CostDashboardProps> = ({onBack}) => {
 			))}
 
 			<Box marginTop={1}>
-				<Text bold underline>By project</Text>
+				<Text bold underline>
+					By project
+				</Text>
 			</Box>
 			{projectRows.slice(0, 8).map(([project, agg]) => (
 				<Text key={project}>
@@ -174,7 +178,9 @@ const CostDashboard: React.FC<CostDashboardProps> = ({onBack}) => {
 			))}
 
 			<Box marginTop={1}>
-				<Text bold underline>By date (recent)</Text>
+				<Text bold underline>
+					By date (recent)
+				</Text>
 			</Box>
 			{dateRows.map(([date, agg]) => (
 				<Text key={date}>
