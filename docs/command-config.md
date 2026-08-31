@@ -2,9 +2,9 @@
 
 ## Overview
 
-CCManager allows you to configure the command used to run code sessions, including arguments and fallback options. This is useful when you need to pass specific flags to Claude Code or have different configurations for different scenarios.
+CCLens allows you to configure the command used to run code sessions, including arguments and fallback options. This is useful when you need to pass specific flags to Claude Code or have different configurations for different scenarios.
 
-While the command itself can be changed for future compatibility with other tools like Codex, **we strongly recommend keeping the default `claude` command** as CCManager is specifically optimized for Claude Code's behavior and output patterns.
+While the command itself can be changed for future compatibility with other tools like Codex, **we strongly recommend keeping the default `claude` command** as CCLens is specifically optimized for Claude Code's behavior and output patterns.
 
 ## Configuration Options
 
@@ -21,9 +21,9 @@ Alternative arguments to use if the command fails with the main arguments. This 
 
 ### Basic Resume Configuration
 
-Configure CCManager to use the `--resume` flag with automatic fallback:
+Configure CCLens to use the `--resume` flag with automatic fallback:
 
-1. Run `ccmanager`
+1. Run `cclens`
 2. Navigate to **Global Configuration** → **Configure Command Presets**
 3. Set up the following:
 
@@ -47,7 +47,7 @@ This configuration will:
 
 ### Custom Command Configuration
 
-While CCManager supports using different commands for future compatibility with tools like Codex or other command-line interfaces, **we recommend keeping the default `claude` command** for the best experience.
+While CCLens supports using different commands for future compatibility with tools like Codex or other command-line interfaces, **we recommend keeping the default `claude` command** for the best experience.
 
 The ability to change the command is primarily intended for:
 - Future support for alternative tools (e.g., Codex)
@@ -60,14 +60,14 @@ Example of custom command (not recommended for general use):
 **Arguments:** `--config /path/to/config`
 **Fallback Arguments:** `--default-config`
 
-**Note:** Changing from `claude` may result in unexpected behavior as CCManager is optimized for Claude Code's specific output patterns and behaviors.
+**Note:** Changing from `claude` may result in unexpected behavior as CCLens is optimized for Claude Code's specific output patterns and behaviors.
 
 ## Configuration File
 
-The command configuration is stored in the CCManager config file:
+The command configuration is stored in the CCLens config file:
 
-**Linux/macOS:** `~/.config/ccmanager/config.json`
-**Windows:** `%APPDATA%\ccmanager\config.json`
+**Linux/macOS:** `~/.config/cclens/config.json`
+**Windows:** `%APPDATA%\cclens\config.json`
 
 Example configuration:
 ```json

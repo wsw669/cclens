@@ -1,5 +1,5 @@
 /**
- * Terminal capabilities detection utilities for CCManager.
+ * Terminal capabilities detection utilities for CCLens.
  * Determines terminal feature support for optimal UI rendering.
  */
 

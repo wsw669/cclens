@@ -1,7 +1,7 @@
 /**
  * Model pricing table (CNY per million tokens).
  *
- * Prices are user-overridable via ~/.config/ccmanager/pricing.json:
+ * Prices are user-overridable via ~/.config/cclens/pricing.json:
  *   { "deepseek-v4-pro": { "input": 2, "output": 8, "cacheRead": 0.5, "cacheWrite": 2 } }
  *
  * Default values are best-effort estimates as of 2026-08 and may drift with
@@ -49,7 +49,7 @@ export const DEFAULT_PRICING: Record<string, ModelPrice> = {
 };
 
 export function getPricingConfigPath(): string {
-	return path.join(os.homedir(), '.config', 'ccmanager', 'pricing.json');
+	return path.join(os.homedir(), '.config', 'cclens', 'pricing.json');
 }
 
 /**

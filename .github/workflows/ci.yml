@@ -34,12 +34,3 @@ jobs:
 
     - name: Build TypeScript
       run: bun run build
-
-    - name: Build native binary
-      run: bun run build:binary:native
-
-    - name: Test binary
-      run: |
-        if [ "$(uname)" = "Linux" ]; then
-          ./npm/linux-x64/bin/ccmanager --help
-        fi

@@ -1121,7 +1121,7 @@ branch refs/heads/feature
 						throw new Error('Branch not found');
 					}
 					if (cmd === 'git remote') {
-						return 'origin\nkbwo-fork\n';
+						return 'origin\nupstream-fork\n';
 					}
 					if (cmd.includes('show-ref --verify --quiet refs/remotes/')) {
 						return ''; // Both remotes have the new branch name
@@ -1161,7 +1161,7 @@ branch refs/heads/feature
 						throw new Error('Branch not found');
 					}
 					if (cmd === 'git remote') {
-						return 'origin\nkbwo-fork\n';
+						return 'origin\nupstream-fork\n';
 					}
 					// Only the baseBranch exists on the remotes; the new branch
 					// name matches nothing anywhere.
@@ -1170,7 +1170,7 @@ branch refs/heads/feature
 							'show-ref --verify --quiet refs/remotes/origin/feature/feed-mention',
 						) ||
 						cmd.includes(
-							'show-ref --verify --quiet refs/remotes/kbwo-fork/feature/feed-mention',
+							'show-ref --verify --quiet refs/remotes/upstream-fork/feature/feed-mention',
 						)
 					) {
 						return '';
@@ -1201,7 +1201,7 @@ branch refs/heads/feature
 				expect((result.left as AmbiguousBranchError).matches).toHaveLength(2);
 				expect(
 					(result.left as AmbiguousBranchError).matches.map(m => m.remote),
-				).toEqual(['origin', 'kbwo-fork']);
+				).toEqual(['origin', 'upstream-fork']);
 			}
 		});
 

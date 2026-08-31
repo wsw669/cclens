@@ -1,10 +1,10 @@
 # Worktree Hooks
 
-CCManager supports executing custom hooks when worktrees are created, allowing you to automate tasks like setting up development environments, creating configuration files, or sending notifications.
+CCLens supports executing custom hooks when worktrees are created, allowing you to automate tasks like setting up development environments, creating configuration files, or sending notifications.
 
 ## Configuration
 
-Worktree hooks are configured in the CCManager configuration file (`~/.config/ccmanager/config.json`). You can configure them through the UI or by editing the configuration file directly.
+Worktree hooks are configured in the CCLens configuration file (`~/.config/cclens/config.json`). You can configure them through the UI or by editing the configuration file directly.
 
 ### Available Hooks
 
@@ -56,22 +56,22 @@ The working directory for hooks depends on the hook type:
 | `pre_creation` | Git root directory | No |
 | `post_creation` | New worktree directory | Yes |
 
-For **post-creation hooks**, if you need to execute commands in the git root directory instead, you can use the `CCMANAGER_GIT_ROOT` environment variable:
+For **post-creation hooks**, if you need to execute commands in the git root directory instead, you can use the `CCLENS_GIT_ROOT` environment variable:
 
 ```bash
-cd "$CCMANAGER_GIT_ROOT" && your-command-here
+cd "$CCLENS_GIT_ROOT" && your-command-here
 ```
 
-For **pre-creation hooks**, you can access the planned worktree path via the `CCMANAGER_WORKTREE_PATH` environment variable, even though it doesn't exist yet.
+For **pre-creation hooks**, you can access the planned worktree path via the `CCLENS_WORKTREE_PATH` environment variable, even though it doesn't exist yet.
 
 ## Environment Variables
 
 When a worktree hook is executed, the following environment variables are available:
 
-- `CCMANAGER_WORKTREE_PATH`: The absolute path to the newly created worktree
-- `CCMANAGER_WORKTREE_BRANCH`: The branch name of the worktree
-- `CCMANAGER_GIT_ROOT`: The root path of the git repository
-- `CCMANAGER_BASE_BRANCH`: The base branch used to create the worktree (optional)
+- `CCLENS_WORKTREE_PATH`: The absolute path to the newly created worktree
+- `CCLENS_WORKTREE_BRANCH`: The branch name of the worktree
+- `CCLENS_GIT_ROOT`: The root path of the git repository
+- `CCLENS_BASE_BRANCH`: The base branch used to create the worktree (optional)
 
 ## Post Creation Hook Examples
 
@@ -172,7 +172,7 @@ echo "Done! Untracked files and directories have been copied to '$DEST_DIR'"
 ```
 
 ```bash
-<path to extract-untracked.sh> $CCMANAGER_GIT_ROOT $CCMANAGER_WORKTREE_PATH
+<path to extract-untracked.sh> $CCLENS_GIT_ROOT $CCLENS_WORKTREE_PATH
 ```
 
 ## Pre Creation Hook Examples
@@ -182,7 +182,7 @@ echo "Done! Untracked files and directories have been copied to '$DEST_DIR'"
 ```bash
 #!/bin/bash
 # Ensure branch name follows convention: feature/, bugfix/, hotfix/
-if [[ ! "$CCMANAGER_WORKTREE_BRANCH" =~ ^(feature|bugfix|hotfix)/ ]]; then
+if [[ ! "$CCLENS_WORKTREE_BRANCH" =~ ^(feature|bugfix|hotfix)/ ]]; then
     echo "Error: Branch name must start with feature/, bugfix/, or hotfix/" >&2
     exit 1
 fi
@@ -193,7 +193,7 @@ fi
 ```bash
 #!/bin/bash
 # Ensure at least 1GB free disk space
-FREE_KB=$(df "$CCMANAGER_GIT_ROOT" | tail -1 | awk '{print $4}')
+FREE_KB=$(df "$CCLENS_GIT_ROOT" | tail -1 | awk '{print $4}')
 MIN_KB=1048576  # 1GB in KB
 
 if [ "$FREE_KB" -lt "$MIN_KB" ]; then
@@ -207,9 +207,9 @@ fi
 ```bash
 #!/bin/bash
 # Check if a worktree for this branch already exists
-EXISTING=$(git worktree list | grep "\[$CCMANAGER_WORKTREE_BRANCH\]")
+EXISTING=$(git worktree list | grep "\[$CCLENS_WORKTREE_BRANCH\]")
 if [ -n "$EXISTING" ]; then
-    echo "Error: Worktree for branch '$CCMANAGER_WORKTREE_BRANCH' already exists" >&2
+    echo "Error: Worktree for branch '$CCLENS_WORKTREE_BRANCH' already exists" >&2
     exit 1
 fi
 ```
@@ -219,8 +219,8 @@ fi
 ```bash
 #!/bin/bash
 # Check if base branch CI is passing (requires gh CLI)
-if [ -n "$CCMANAGER_BASE_BRANCH" ]; then
-    STATUS=$(gh run list --branch "$CCMANAGER_BASE_BRANCH" --limit 1 --json conclusion -q '.[0].conclusion')
+if [ -n "$CCLENS_BASE_BRANCH" ]; then
+    STATUS=$(gh run list --branch "$CCLENS_BASE_BRANCH" --limit 1 --json conclusion -q '.[0].conclusion')
     if [ "$STATUS" != "success" ]; then
         echo "Warning: Base branch CI status is '$STATUS'" >&2
         # Use exit 1 to block, or continue with warning

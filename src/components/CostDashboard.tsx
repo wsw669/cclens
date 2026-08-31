@@ -3,7 +3,7 @@
  * session logs and renders a breakdown by model, project and date, plus a
  * budget status line.
  *
- * Added on top of ccmanager to answer "where did my AI money go?".
+ * Added on top of cclens to answer "where did my AI money go?".
  */
 import React, {useEffect, useState} from 'react';
 import {Box, Text, useInput, useApp} from 'ink';
@@ -187,7 +187,7 @@ const CostDashboard: React.FC<CostDashboardProps> = ({onBack}) => {
 			<Box marginTop={1}>
 				<Text dimColor>
 					Esc/Q back · Ctrl+C quit · prices configurable in
-					~/.config/ccmanager/pricing.json
+					~/.config/cclens/pricing.json
 				</Text>
 			</Box>
 		</Box>

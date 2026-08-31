@@ -163,7 +163,7 @@ const Session: React.FC<SessionProps> = ({
 		const currentRows = process.stdout.rows || 24;
 
 		// Do not delete try-catch
-		// Prevent ccmanager from exiting when claude process has already exited
+		// Prevent cclens from exiting when claude process has already exited
 		try {
 			session.process.resize(currentCols, currentRows);
 			if (session.terminal) {

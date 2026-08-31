@@ -1,6 +1,6 @@
 # Git Worktree Configuration for Enhanced Status
 
-CCManager can display enhanced git status information for each worktree, including file changes, commits ahead/behind relative to parent branches, and parent branch context. This requires enabling Git's worktree configuration extension.
+CCLens can display enhanced git status information for each worktree, including file changes, commits ahead/behind relative to parent branches, and parent branch context. This requires enabling Git's worktree configuration extension.
 
 ## What You Get
 
@@ -38,9 +38,9 @@ When enabled:
 2. Worktree-specific settings are stored separately from the main config
 3. Each worktree can have independent configuration values
 
-### CCManager's Parent Branch Tracking
+### CCLens's Parent Branch Tracking
 
-CCManager uses this feature to:
+CCLens uses this feature to:
 1. Store the parent branch name when creating a worktree
 2. Calculate accurate ahead/behind counts relative to the parent
 3. Display meaningful diff information for each worktree
@@ -48,12 +48,12 @@ CCManager uses this feature to:
 Example workflow:
 ```bash
 # Create a worktree from 'main' branch
-$ ccmanager  # Create worktree 'feature/login' from 'main'
+$ cclens  # Create worktree 'feature/login' from 'main'
 
-# CCManager stores in worktree config:
-# ccmanager.parentBranch = main
+# CCLens stores in worktree config:
+# cclens.parentBranch = main
 
-# Later, CCManager shows:
+# Later, CCLens shows:
 # feature/login [↑3 ↓1 main] +25 -10
 # Meaning: 3 commits ahead, 1 behind main, with 25 additions and 10 deletions
 ```
@@ -85,7 +85,7 @@ Know immediately which branch your worktree was created from, essential for:
 - Planning rebases
 
 ### 2. Accurate Comparisons
-Without worktree config, CCManager would need to guess or use a default branch (like `main`), which may not reflect the actual parent relationship.
+Without worktree config, CCLens would need to guess or use a default branch (like `main`), which may not reflect the actual parent relationship.
 
 ### 3. Independent Tracking
 Each worktree maintains its own parent reference, allowing:
@@ -96,15 +96,15 @@ Each worktree maintains its own parent reference, allowing:
 ## Technical Details
 
 ### Configuration Storage
-When you create a worktree with CCManager:
+When you create a worktree with CCLens:
 ```bash
 # Stored in .git/worktrees/<name>/config.worktree
-[ccmanager]
+[cclens]
     parentBranch = main
 ```
 
 ### Status Calculation
-CCManager runs these git commands internally:
+CCLens runs these git commands internally:
 ```bash
 # Get file changes
 git diff --shortstat
@@ -126,7 +126,7 @@ If worktree config is not enabled:
 ```bash
 cd my-project
 git config extensions.worktreeConfig true
-ccmanager  # Now with full status tracking
+cclens  # Now with full status tracking
 ```
 
 ### Enabling for Existing Worktrees
@@ -135,7 +135,7 @@ ccmanager  # Now with full status tracking
 git config extensions.worktreeConfig true
 
 # Recreate worktrees or manually set parent branches
-git config --worktree ccmanager.parentBranch main
+git config --worktree cclens.parentBranch main
 ```
 
 ### Global Configuration
@@ -153,13 +153,13 @@ git config --global extensions.worktreeConfig true
    ```
 2. Verify parent branch is set:
    ```bash
-   git config --worktree ccmanager.parentBranch
+   git config --worktree cclens.parentBranch
    ```
 
 ### Incorrect Parent Branch?
 Manually update the parent branch:
 ```bash
-git config --worktree ccmanager.parentBranch develop
+git config --worktree cclens.parentBranch develop
 ```
 
 ### Performance Considerations

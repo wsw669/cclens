@@ -65,7 +65,7 @@ export function getWorktreeParentBranch(
 			try: signal =>
 				execFileAsync(
 					'git',
-					['config', '--worktree', 'ccmanager.parentBranch'],
+					['config', '--worktree', 'cclens.parentBranch'],
 					{
 						cwd: worktreePath,
 						encoding: 'utf8',
@@ -133,13 +133,13 @@ export function setWorktreeParentBranch(
 		return Effect.void;
 	}
 
-	const command = `git config --worktree ccmanager.parentBranch ${parentBranch}`;
+	const command = `git config --worktree cclens.parentBranch ${parentBranch}`;
 	return Effect.catchAll(
 		Effect.tryPromise({
 			try: signal =>
 				execFileAsync(
 					'git',
-					['config', '--worktree', 'ccmanager.parentBranch', parentBranch],
+					['config', '--worktree', 'cclens.parentBranch', parentBranch],
 					{
 						cwd: worktreePath,
 						encoding: 'utf8',

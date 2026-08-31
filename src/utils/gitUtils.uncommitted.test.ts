@@ -9,7 +9,7 @@ describe('hasUncommittedChanges', () => {
 	// Use os.tmpdir() and unique suffix to avoid conflicts with parallel tests
 	// Use realpathSync to resolve symlinks (e.g., /var -> /private/var on macOS)
 	const testDir = fs.realpathSync(
-		fs.mkdtempSync(path.join(os.tmpdir(), 'ccmanager-uncommitted-test-')),
+		fs.mkdtempSync(path.join(os.tmpdir(), 'cclens-uncommitted-test-')),
 	);
 	const mainRepoDir = path.join(testDir, 'main-repo');
 	const worktreeDir = path.join(testDir, 'worktree-1');

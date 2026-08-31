@@ -2,7 +2,7 @@
  * Summaries view: browse session summaries auto-generated when AI sessions
  * exit, and read the details of any past conversation.
  *
- * Added on top of ccmanager so finished sessions become reusable assets.
+ * Added on top of cclens so finished sessions become reusable assets.
  */
 import React, {useEffect, useState} from 'react';
 import {Box, Text, useInput, useApp} from 'ink';
@@ -100,7 +100,7 @@ const SummariesView: React.FC<SummariesViewProps> = ({onBack}) => {
 				<Box marginY={1}>
 					<Text dimColor>
 						No summaries yet. They are generated automatically when a session
-						exits (requires CCM_LLM_API_KEY).
+						exits (requires CCLENS_LLM_API_KEY).
 					</Text>
 				</Box>
 				<Text dimColor>Esc/Q back</Text>

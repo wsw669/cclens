@@ -19,11 +19,11 @@ import {
 import {ENV_VARS} from '../../constants/env.js';
 import {getGitRepositoryRoot} from '../../utils/gitUtils.js';
 
-const PROJECT_CONFIG_FILENAME = '.ccmanager.json';
+const PROJECT_CONFIG_FILENAME = '.cclens.json';
 
 /**
  * ProjectConfigManager handles project-specific configuration.
- * Reads/writes from `<git repository root>/.ccmanager.json`.
+ * Reads/writes from `<git repository root>/.cclens.json`.
  * Implements IConfigEditor for consistent API with GlobalConfigManager.
  */
 class ProjectConfigManager implements IConfigEditor {

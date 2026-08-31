@@ -40,9 +40,9 @@ describe('hookExecutor Integration Tests', () => {
 			// Arrange
 			const tmpDir = await mkdtemp(join(tmpdir(), 'hook-test-'));
 			const environment = {
-				CCMANAGER_WORKTREE_PATH: tmpDir,
-				CCMANAGER_WORKTREE_BRANCH: 'test-branch',
-				CCMANAGER_GIT_ROOT: tmpDir,
+				CCLENS_WORKTREE_PATH: tmpDir,
+				CCLENS_WORKTREE_BRANCH: 'test-branch',
+				CCLENS_GIT_ROOT: tmpDir,
 			};
 
 			try {
@@ -62,9 +62,9 @@ describe('hookExecutor Integration Tests', () => {
 			// Arrange
 			const tmpDir = await mkdtemp(join(tmpdir(), 'hook-test-'));
 			const environment = {
-				CCMANAGER_WORKTREE_PATH: tmpDir,
-				CCMANAGER_WORKTREE_BRANCH: 'test-branch',
-				CCMANAGER_GIT_ROOT: tmpDir,
+				CCLENS_WORKTREE_PATH: tmpDir,
+				CCLENS_WORKTREE_BRANCH: 'test-branch',
+				CCLENS_GIT_ROOT: tmpDir,
 			};
 
 			try {
@@ -82,9 +82,9 @@ describe('hookExecutor Integration Tests', () => {
 			// Arrange
 			const tmpDir = await mkdtemp(join(tmpdir(), 'hook-test-'));
 			const environment = {
-				CCMANAGER_WORKTREE_PATH: tmpDir,
-				CCMANAGER_WORKTREE_BRANCH: 'test-branch',
-				CCMANAGER_GIT_ROOT: tmpDir,
+				CCLENS_WORKTREE_PATH: tmpDir,
+				CCLENS_WORKTREE_BRANCH: 'test-branch',
+				CCLENS_GIT_ROOT: tmpDir,
 			};
 
 			try {
@@ -110,9 +110,9 @@ describe('hookExecutor Integration Tests', () => {
 			// Arrange
 			const tmpDir = await mkdtemp(join(tmpdir(), 'hook-test-'));
 			const environment = {
-				CCMANAGER_WORKTREE_PATH: tmpDir,
-				CCMANAGER_WORKTREE_BRANCH: 'test-branch',
-				CCMANAGER_GIT_ROOT: tmpDir,
+				CCLENS_WORKTREE_PATH: tmpDir,
+				CCLENS_WORKTREE_BRANCH: 'test-branch',
+				CCLENS_GIT_ROOT: tmpDir,
 			};
 
 			try {
@@ -150,9 +150,9 @@ describe('hookExecutor Integration Tests', () => {
 			// Arrange
 			const tmpDir = await mkdtemp(join(tmpdir(), 'hook-test-'));
 			const environment = {
-				CCMANAGER_WORKTREE_PATH: tmpDir,
-				CCMANAGER_WORKTREE_BRANCH: 'test-branch',
-				CCMANAGER_GIT_ROOT: tmpDir,
+				CCLENS_WORKTREE_PATH: tmpDir,
+				CCLENS_WORKTREE_BRANCH: 'test-branch',
+				CCLENS_GIT_ROOT: tmpDir,
 			};
 
 			try {
@@ -178,9 +178,9 @@ describe('hookExecutor Integration Tests', () => {
 			const tmpDir = await mkdtemp(join(tmpdir(), 'hook-cwd-test-'));
 			const outputFile = join(tmpDir, 'cwd.txt');
 			const environment = {
-				CCMANAGER_WORKTREE_PATH: tmpDir,
-				CCMANAGER_WORKTREE_BRANCH: 'test-branch',
-				CCMANAGER_GIT_ROOT: '/some/other/path',
+				CCLENS_WORKTREE_PATH: tmpDir,
+				CCLENS_WORKTREE_BRANCH: 'test-branch',
+				CCLENS_GIT_ROOT: '/some/other/path',
 			};
 
 			try {
@@ -290,7 +290,7 @@ describe('hookExecutor Integration Tests', () => {
 				// Act - change to git root and write its path
 				await Effect.runPromise(
 					executeWorktreePostCreationHook(
-						`cd "$CCMANAGER_GIT_ROOT" && pwd > "${outputFile}"`,
+						`cd "$CCLENS_GIT_ROOT" && pwd > "${outputFile}"`,
 						worktree,
 						tmpGitRootDir,
 						'main',
@@ -449,7 +449,7 @@ describe('hookExecutor Integration Tests', () => {
 				// Act - write environment variables to file
 				await Effect.runPromise(
 					executeWorktreePreCreationHook(
-						`echo "PATH:$CCMANAGER_WORKTREE_PATH|BRANCH:$CCMANAGER_WORKTREE_BRANCH|ROOT:$CCMANAGER_GIT_ROOT|BASE:$CCMANAGER_BASE_BRANCH" > "${outputFile}"`,
+						`echo "PATH:$CCLENS_WORKTREE_PATH|BRANCH:$CCLENS_WORKTREE_BRANCH|ROOT:$CCLENS_GIT_ROOT|BASE:$CCLENS_BASE_BRANCH" > "${outputFile}"`,
 						worktreePath,
 						branch,
 						gitRoot,
@@ -510,7 +510,7 @@ describe('hookExecutor Integration Tests', () => {
 				// Act - write environment variables to file (without baseBranch)
 				await Effect.runPromise(
 					executeWorktreePreCreationHook(
-						`echo "BASE:$CCMANAGER_BASE_BRANCH" > "${outputFile}"`,
+						`echo "BASE:$CCLENS_BASE_BRANCH" > "${outputFile}"`,
 						worktreePath,
 						branch,
 						gitRoot,
@@ -778,7 +778,7 @@ describe('hookExecutor Integration Tests', () => {
 			vi.mocked(configReader.getStatusHooks).mockReturnValue({
 				busy: {
 					enabled: true,
-					command: `echo "Hook ran with branch: $CCMANAGER_WORKTREE_BRANCH" > "${outputFile}"`,
+					command: `echo "Hook ran with branch: $CCLENS_WORKTREE_BRANCH" > "${outputFile}"`,
 				},
 				idle: {enabled: false, command: ''},
 				waiting_input: {enabled: false, command: ''},

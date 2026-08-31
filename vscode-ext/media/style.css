@@ -1,0 +1,362 @@
+/* CCLens webview — follows the VS Code theme via CSS variables,
+   so both dark and light themes work without extra code. */
+
+* {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	background: var(--vscode-sideBar-background);
+	color: var(--vscode-sideBar-foreground);
+	font-family: var(--vscode-font-family);
+	font-size: var(--vscode-font-size);
+	padding: 12px 12px 20px;
+}
+
+.hidden {
+	display: none !important;
+}
+
+/* ---------- top bar ---------- */
+
+.topbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 6px;
+}
+
+.brand {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-weight: 600;
+	font-size: 13px;
+}
+
+.brand svg {
+	color: var(--vscode-charts-blue);
+}
+
+.btn {
+	background: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+	border: none;
+	border-radius: 4px;
+	padding: 3px 10px;
+	cursor: pointer;
+	font: inherit;
+	font-size: 11px;
+	line-height: 18px;
+}
+
+.btn:hover {
+	background: var(--vscode-button-hoverBackground);
+}
+
+.btn:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+.view-title {
+	font-size: 11px;
+	color: var(--vscode-descriptionForeground);
+	margin: 0 0 10px 2px;
+	letter-spacing: 0.5px;
+}
+
+/* ---------- cards ---------- */
+
+.card {
+	background: var(--vscode-editorWidget-background);
+	border: 1px solid var(--vscode-panel-border);
+	border-radius: 8px;
+	padding: 12px;
+	margin-bottom: 12px;
+}
+
+.card h3 {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--vscode-descriptionForeground);
+	margin-bottom: 10px;
+	letter-spacing: 0.3px;
+}
+
+/* ---------- hero / budget ---------- */
+
+.hero-label {
+	font-size: 11px;
+	color: var(--vscode-descriptionForeground);
+	margin-bottom: 2px;
+}
+
+.amount {
+	font-size: 28px;
+	font-weight: 700;
+	line-height: 1.1;
+	font-variant-numeric: tabular-nums;
+}
+
+.meta {
+	color: var(--vscode-descriptionForeground);
+	font-size: 11px;
+	margin-top: 5px;
+}
+
+.budget-bar {
+	height: 8px;
+	border-radius: 4px;
+	background: var(--vscode-input-background);
+	overflow: hidden;
+	margin-top: 10px;
+}
+
+.budget-fill {
+	height: 100%;
+	border-radius: 4px;
+	transition: width 0.3s ease;
+}
+
+.budget-caption {
+	font-size: 11px;
+	margin-top: 6px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	color: var(--vscode-descriptionForeground);
+}
+
+.tag {
+	padding: 1px 8px;
+	border-radius: 10px;
+	font-size: 10px;
+	color: #fff;
+}
+
+.tag.ok {
+	background: var(--vscode-charts-green);
+}
+
+.tag.warn {
+	background: var(--vscode-charts-orange);
+}
+
+.tag.over {
+	background: var(--vscode-charts-red);
+}
+
+/* ---------- horizontal bars (models / projects) ---------- */
+
+.row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 0;
+	font-size: 12px;
+}
+
+.row .name {
+	flex: 0 0 34%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.row .bar-track {
+	flex: 1;
+	height: 6px;
+	border-radius: 3px;
+	background: var(--vscode-input-background);
+	overflow: hidden;
+}
+
+.row .bar-fill {
+	height: 100%;
+	border-radius: 3px;
+}
+
+.row .value {
+	flex: 0 0 auto;
+	min-width: 96px;
+	text-align: right;
+	color: var(--vscode-descriptionForeground);
+	font-variant-numeric: tabular-nums;
+}
+
+.row .value b {
+	color: var(--vscode-sideBar-foreground);
+	font-weight: 600;
+}
+
+/* ---------- 7-day trend ---------- */
+
+.trend-bars {
+	display: flex;
+	gap: 6px;
+	align-items: flex-end;
+	height: 120px;
+	padding-top: 16px;
+}
+
+.tcol {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	height: 100%;
+	justify-content: flex-end;
+}
+
+.tv {
+	font-size: 9px;
+	color: var(--vscode-descriptionForeground);
+	margin-bottom: 3px;
+	font-variant-numeric: tabular-nums;
+	min-height: 12px;
+}
+
+.ttrack {
+	width: 100%;
+	max-width: 34px;
+	flex: 1;
+	display: flex;
+	align-items: flex-end;
+	background: var(--vscode-input-background);
+	border-radius: 4px 4px 0 0;
+	overflow: hidden;
+}
+
+.tfill {
+	width: 100%;
+	background: var(--vscode-charts-blue);
+	border-radius: 4px 4px 0 0;
+}
+
+.tcol.today .tfill {
+	background: var(--vscode-charts-purple);
+}
+
+.td {
+	font-size: 9px;
+	color: var(--vscode-descriptionForeground);
+	margin-top: 4px;
+}
+
+/* ---------- summaries ---------- */
+
+.summary-item {
+	padding: 10px;
+	border-radius: 8px;
+	cursor: pointer;
+	border: 1px solid transparent;
+	margin-bottom: 8px;
+	background: var(--vscode-editorWidget-background);
+}
+
+.summary-item:hover {
+	border-color: var(--vscode-focusBorder);
+	background: var(--vscode-list-hoverBackground);
+}
+
+.summary-item .t {
+	font-weight: 600;
+	font-size: 12px;
+	margin-bottom: 3px;
+}
+
+.summary-item .m {
+	color: var(--vscode-descriptionForeground);
+	font-size: 11px;
+}
+
+.backlink {
+	display: flex;
+	gap: 6px;
+	align-items: center;
+	margin-bottom: 10px;
+	font-size: 12px;
+	cursor: pointer;
+	color: var(--vscode-textLink-foreground);
+}
+
+.backlink:hover {
+	text-decoration: underline;
+}
+
+.detail h2 {
+	font-size: 14px;
+	margin-bottom: 4px;
+	line-height: 1.4;
+}
+
+.detail .m {
+	color: var(--vscode-descriptionForeground);
+	font-size: 11px;
+	margin-bottom: 6px;
+}
+
+.detail h4 {
+	font-size: 11px;
+	color: var(--vscode-descriptionForeground);
+	margin: 12px 0 5px;
+	letter-spacing: 0.4px;
+}
+
+.detail ul {
+	list-style: none;
+}
+
+.detail li {
+	position: relative;
+	padding-left: 14px;
+	font-size: 12px;
+	line-height: 1.55;
+	margin-bottom: 4px;
+}
+
+.detail li::before {
+	content: '';
+	position: absolute;
+	left: 2px;
+	top: 7px;
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background: var(--vscode-charts-blue);
+}
+
+.raw {
+	white-space: pre-wrap;
+	font-size: 11px;
+	line-height: 1.6;
+	color: var(--vscode-sideBar-foreground);
+	font-family: var(--vscode-font-family);
+}
+
+/* ---------- empty / error states ---------- */
+
+.empty {
+	color: var(--vscode-descriptionForeground);
+	font-size: 12px;
+	line-height: 1.8;
+	padding: 16px 8px;
+}
+
+.empty code {
+	background: var(--vscode-input-background);
+	padding: 1px 5px;
+	border-radius: 3px;
+	font-family: var(--vscode-editor-font-family, monospace);
+	font-size: 11px;
+}
+
+.error {
+	color: var(--vscode-errorForeground);
+	font-size: 12px;
+	line-height: 1.7;
+	padding: 12px 8px;
+}

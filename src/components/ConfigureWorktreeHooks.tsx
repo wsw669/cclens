@@ -178,12 +178,12 @@ const ConfigureWorktreeHooks: React.FC<ConfigureWorktreeHooksProps> = ({
 
 				<Box marginTop={1}>
 					<Text dimColor>
-						Environment variables available: CCMANAGER_WORKTREE_PATH,
-						CCMANAGER_WORKTREE_BRANCH,
+						Environment variables available: CCLENS_WORKTREE_PATH,
+						CCLENS_WORKTREE_BRANCH,
 					</Text>
 				</Box>
 				<Box>
-					<Text dimColor>CCMANAGER_BASE_BRANCH, CCMANAGER_GIT_ROOT</Text>
+					<Text dimColor>CCLENS_BASE_BRANCH, CCLENS_GIT_ROOT</Text>
 				</Box>
 
 				<Box marginTop={1}>

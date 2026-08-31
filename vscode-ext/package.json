@@ -1,0 +1,100 @@
+{
+	"name": "cclens",
+	"displayName": "CCLens — Claude Code 成本仪表盘",
+	"description": "Claude Code 会话成本可视化与摘要浏览：在编辑器侧边栏实时看每个会话烧了多少钱，回看历史会话的结论。",
+	"version": "0.1.0",
+	"publisher": "cclens",
+	"license": "MIT",
+	"engines": {
+		"vscode": "^1.90.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"keywords": [
+		"claude",
+		"claude-code",
+		"cost",
+		"token",
+		"dashboard",
+		"ai"
+	],
+	"main": "./dist/extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "cclens.openDashboard",
+				"title": "CCLens: 打开成本仪表盘",
+				"category": "CCLens"
+			},
+			{
+				"command": "cclens.refresh",
+				"title": "CCLens: 刷新数据",
+				"category": "CCLens"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "cclens",
+					"title": "CCLens",
+					"icon": "media/icon.svg"
+				}
+			]
+		},
+		"views": {
+			"cclens": [
+				{
+					"type": "webview",
+					"id": "cclens.dashboard",
+					"name": "成本仪表盘"
+				},
+				{
+					"type": "webview",
+					"id": "cclens.summaries",
+					"name": "会话摘要"
+				}
+			]
+		},
+		"configuration": {
+			"title": "CCLens",
+			"properties": {
+				"cclens.monthlyBudget": {
+					"type": "number",
+					"default": 100,
+					"description": "月度预算（元），仪表盘按此预算显示使用进度"
+				},
+				"cclens.warnRatio": {
+					"type": "number",
+					"default": 80,
+					"minimum": 1,
+					"maximum": 100,
+					"description": "预算警戒线（百分比），达到后仪表盘显示黄色预警"
+				},
+				"cclens.projectsDir": {
+					"type": "string",
+					"default": "",
+					"description": "Claude Code 会话数据目录，留空时自动检测（~/.claude/projects）"
+				},
+				"cclens.autoRefresh": {
+					"type": "boolean",
+					"default": true,
+					"description": "检测到会话日志变化时自动重新分析（防抖 60 秒）"
+				}
+			}
+		}
+	},
+	"scripts": {
+		"build": "node esbuild.mjs",
+		"typecheck": "tsc --noEmit",
+		"package": "node esbuild.mjs && vsce package",
+		"vscode:prepublish": "node esbuild.mjs"
+	},
+	"devDependencies": {
+		"@types/node": "^20.11.0",
+		"@types/vscode": "^1.90.0",
+		"@vscode/vsce": "^2.26.0",
+		"esbuild": "^0.21.0",
+		"typescript": "^5.4.0"
+	}
+}

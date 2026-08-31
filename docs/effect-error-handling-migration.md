@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the completed migration from traditional try-catch error handling to Effect-ts based error handling in CCManager. The migration provides type-safe, composable error handling with explicit error types in function signatures.
+This document describes the completed migration from traditional try-catch error handling to Effect-ts based error handling in CCLens. The migration provides type-safe, composable error handling with explicit error types in function signatures.
 
 **Migration Completed:** October 2025
 **Specification:** result-pattern-error-handling-2
@@ -306,7 +306,7 @@ The migration to Effect-ts has minimal performance impact:
 
 ### Migration Patterns for New Code
 
-When adding new code to CCManager:
+When adding new code to CCLens:
 
 1. **Service Methods**: Always return Effect types for operations that can fail
 2. **Components**: Use Effect.match in useEffect and event handlers
@@ -338,10 +338,10 @@ The following verification steps were completed to ensure migration success:
 
 ## Conclusion
 
-The migration to Effect-ts based error handling is complete and provides CCManager with:
+The migration to Effect-ts based error handling is complete and provides CCLens with:
 - Type-safe error handling throughout the codebase
 - Better composition and error recovery strategies
 - Improved testability with explicit error paths
 - Clear documentation and examples for future development
 
-This migration establishes Effect-ts as the standard for error handling in CCManager, ensuring consistent, safe, and composable error management across all services and components.
+This migration establishes Effect-ts as the standard for error handling in CCLens, ensuring consistent, safe, and composable error management across all services and components.

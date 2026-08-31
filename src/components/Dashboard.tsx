@@ -652,7 +652,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 		<Box flexDirection="column">
 			<Box marginBottom={1} flexDirection="column">
 				<Text bold color="green">
-					CCManager - Dashboard v{version}
+					CCLens - Dashboard v{version}
 				</Text>
 			</Box>
 

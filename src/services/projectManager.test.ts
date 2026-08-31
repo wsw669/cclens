@@ -22,9 +22,9 @@ const mockFs = fs as any;
 describe('ProjectManager', () => {
 	let projectManager: ProjectManager;
 	const mockProjectsDir = '/home/user/projects';
-	const mockConfigDir = '/home/user/.config/ccmanager';
+	const mockConfigDir = '/home/user/.config/cclens';
 	const mockRecentProjectsPath =
-		'/home/user/.config/ccmanager/recent-projects.json';
+		'/home/user/.config/cclens/recent-projects.json';
 
 	beforeEach(() => {
 		vi.clearAllMocks();

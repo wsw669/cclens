@@ -8,10 +8,10 @@ import {configReader} from '../services/config/configReader.js';
 import {logger} from './logger.js';
 
 export interface HookEnvironment {
-	CCMANAGER_WORKTREE_PATH: string;
-	CCMANAGER_WORKTREE_BRANCH: string;
-	CCMANAGER_GIT_ROOT: string;
-	CCMANAGER_BASE_BRANCH?: string;
+	CCLENS_WORKTREE_PATH: string;
+	CCLENS_WORKTREE_BRANCH: string;
+	CCLENS_GIT_ROOT: string;
+	CCLENS_BASE_BRANCH?: string;
 	[key: string]: string | undefined;
 }
 
@@ -32,9 +32,9 @@ export interface HookEnvironment {
  * import {executeHook} from './utils/hookExecutor.js';
  *
  * const env = {
- *   CCMANAGER_WORKTREE_PATH: '/path/to/worktree',
- *   CCMANAGER_WORKTREE_BRANCH: 'feature-branch',
- *   CCMANAGER_GIT_ROOT: '/path/to/repo'
+ *   CCLENS_WORKTREE_PATH: '/path/to/worktree',
+ *   CCLENS_WORKTREE_BRANCH: 'feature-branch',
+ *   CCLENS_GIT_ROOT: '/path/to/repo'
  * };
  *
  * // Execute hook with error recovery
@@ -164,13 +164,13 @@ export function executeWorktreePreCreationHook(
 	baseBranch?: string,
 ): Effect.Effect<void, ProcessError> {
 	const environment: HookEnvironment = {
-		CCMANAGER_WORKTREE_PATH: worktreePath,
-		CCMANAGER_WORKTREE_BRANCH: branch,
-		CCMANAGER_GIT_ROOT: gitRoot,
+		CCLENS_WORKTREE_PATH: worktreePath,
+		CCLENS_WORKTREE_BRANCH: branch,
+		CCLENS_GIT_ROOT: gitRoot,
 	};
 
 	if (baseBranch) {
-		environment.CCMANAGER_BASE_BRANCH = baseBranch;
+		environment.CCLENS_BASE_BRANCH = baseBranch;
 	}
 
 	logger.info('Worktree pre-creation hook configured', {
@@ -197,13 +197,13 @@ export function executeWorktreePostCreationHook(
 	baseBranch?: string,
 ): Effect.Effect<void, ProcessError> {
 	const environment: HookEnvironment = {
-		CCMANAGER_WORKTREE_PATH: worktree.path,
-		CCMANAGER_WORKTREE_BRANCH: worktree.branch || 'unknown',
-		CCMANAGER_GIT_ROOT: gitRoot,
+		CCLENS_WORKTREE_PATH: worktree.path,
+		CCLENS_WORKTREE_BRANCH: worktree.branch || 'unknown',
+		CCLENS_GIT_ROOT: gitRoot,
 	};
 
 	if (baseBranch) {
-		environment.CCMANAGER_BASE_BRANCH = baseBranch;
+		environment.CCLENS_BASE_BRANCH = baseBranch;
 	}
 
 	logger.info('Worktree post-creation hook configured', {
@@ -253,14 +253,14 @@ export function executeStatusHook(
 
 		// Build environment for status hook
 		const environment: HookEnvironment = {
-			CCMANAGER_WORKTREE_PATH: session.worktreePath,
-			CCMANAGER_WORKTREE_DIR: basename(session.worktreePath),
-			CCMANAGER_WORKTREE_BRANCH: branch,
-			CCMANAGER_GIT_ROOT: session.worktreePath, // For status hooks, we use worktree path as cwd
-			CCMANAGER_OLD_STATE: oldState,
-			CCMANAGER_NEW_STATE: newState,
-			CCMANAGER_SESSION_ID: session.id,
-			CCMANAGER_PRESET_NAME: session.presetName || '',
+			CCLENS_WORKTREE_PATH: session.worktreePath,
+			CCLENS_WORKTREE_DIR: basename(session.worktreePath),
+			CCLENS_WORKTREE_BRANCH: branch,
+			CCLENS_GIT_ROOT: session.worktreePath, // For status hooks, we use worktree path as cwd
+			CCLENS_OLD_STATE: oldState,
+			CCLENS_NEW_STATE: newState,
+			CCLENS_SESSION_ID: session.id,
+			CCLENS_PRESET_NAME: session.presetName || '',
 		};
 
 		yield* Effect.catchAll(

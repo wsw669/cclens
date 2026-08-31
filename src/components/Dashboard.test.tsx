@@ -207,7 +207,7 @@ describe('Dashboard', () => {
 			/>,
 		);
 
-		expect(lastFrame()).toContain('CCManager - Dashboard v3.8.1');
+		expect(lastFrame()).toContain('CCLens - Dashboard v3.8.1');
 	});
 
 	it('should display loading state initially', () => {

@@ -3,7 +3,7 @@ import type {StateDetectionStrategy} from '../types/index.js';
 /**
  * Inject `--teammate-mode in-process` into args when running the `claude` command
  * with the `claude` detection strategy. This prevents tmux conflicts when
- * Claude Code's agent teams feature is used inside ccmanager's PTY-based sessions.
+ * Claude Code's agent teams feature is used inside cclens's PTY-based sessions.
  *
  * Returns the original array unchanged if injection is not needed.
  */

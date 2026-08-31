@@ -32,9 +32,9 @@ class GlobalConfigManager implements IConfigEditor {
 			process.platform === 'win32'
 				? join(
 						process.env['APPDATA'] || join(homeDir, 'AppData', 'Roaming'),
-						'ccmanager',
+						'cclens',
 					)
-				: join(homeDir, '.config', 'ccmanager');
+				: join(homeDir, '.config', 'cclens');
 
 		// Ensure config directory exists
 		if (!existsSync(this.configDir)) {

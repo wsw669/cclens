@@ -78,10 +78,11 @@ export function getClaudeProjectsDir(): Either.Either<string, ValidationError> {
  */
 export function pathToClaudeProjectName(worktreePath: string): string {
 	// Convert absolute path to Claude's project naming convention
-	// Claude replaces all path separators and dots with dashes
+	// Claude replaces path separators, drive colons, and dots with dashes
 	const resolved = path.resolve(worktreePath);
-	// Handle both forward slashes (Linux/macOS) and backslashes (Windows)
-	return resolved.replace(/[/\\.]/g, '-');
+	// Handle both forward slashes (Linux/macOS) and backslashes (Windows),
+	// plus the Windows drive colon (C:\... -> C--...)
+	return resolved.replace(/[/\\:.]/g, '-');
 }
 
 /**

@@ -69,7 +69,7 @@ describe('ConfigReader in multi-project mode', () => {
 		// Mock file system
 		(existsSync as ReturnType<typeof vi.fn>).mockImplementation(
 			(path: string) => {
-				if (path.includes('.ccmanager.json')) {
+				if (path.includes('.cclens.json')) {
 					return true; // Project config exists
 				}
 				if (path.includes('config.json')) {
@@ -81,7 +81,7 @@ describe('ConfigReader in multi-project mode', () => {
 
 		(readFileSync as ReturnType<typeof vi.fn>).mockImplementation(
 			(path: string) => {
-				if (path.includes('.ccmanager.json')) {
+				if (path.includes('.cclens.json')) {
 					return JSON.stringify(projectConfigData);
 				}
 				if (path.includes('config.json')) {
@@ -105,7 +105,7 @@ describe('ConfigReader in multi-project mode', () => {
 		vi.resetAllMocks();
 	});
 
-	it('should return global config when CCMANAGER_MULTI_PROJECT_ROOT is set', async () => {
+	it('should return global config when CCLENS_MULTI_PROJECT_ROOT is set', async () => {
 		// Set multi-project mode
 		process.env[ENV_VARS.MULTI_PROJECT_ROOT] = '/path/to/projects';
 
@@ -123,7 +123,7 @@ describe('ConfigReader in multi-project mode', () => {
 		expect(presets.presets[0]!.name).toBe('Global Preset');
 	});
 
-	it('should return project config when CCMANAGER_MULTI_PROJECT_ROOT is not set', async () => {
+	it('should return project config when CCLENS_MULTI_PROJECT_ROOT is not set', async () => {
 		// Ensure multi-project mode is NOT set
 		delete process.env[ENV_VARS.MULTI_PROJECT_ROOT];
 
@@ -205,13 +205,13 @@ describe('ConfigReader - worktree config field-level merging', () => {
 
 		(existsSync as ReturnType<typeof vi.fn>).mockImplementation(
 			(path: string) => {
-				return path.includes('.ccmanager.json') || path.includes('config.json');
+				return path.includes('.cclens.json') || path.includes('config.json');
 			},
 		);
 
 		(readFileSync as ReturnType<typeof vi.fn>).mockImplementation(
 			(path: string) => {
-				if (path.includes('.ccmanager.json')) {
+				if (path.includes('.cclens.json')) {
 					return JSON.stringify(projectConfig);
 				}
 				if (path.includes('config.json')) {
@@ -257,13 +257,13 @@ describe('ConfigReader - worktree config field-level merging', () => {
 
 		(existsSync as ReturnType<typeof vi.fn>).mockImplementation(
 			(path: string) => {
-				return path.includes('.ccmanager.json') || path.includes('config.json');
+				return path.includes('.cclens.json') || path.includes('config.json');
 			},
 		);
 
 		(readFileSync as ReturnType<typeof vi.fn>).mockImplementation(
 			(path: string) => {
-				if (path.includes('.ccmanager.json')) {
+				if (path.includes('.cclens.json')) {
 					return JSON.stringify(projectConfig);
 				}
 				if (path.includes('config.json')) {

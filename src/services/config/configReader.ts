@@ -17,7 +17,7 @@ import {DEFAULT_TIMEOUT_SECONDS} from '../../constants/autoApproval.js';
 
 /**
  * ConfigReader provides merged configuration reading for runtime components.
- * It combines project-level config (from `.ccmanager.json`) with global config,
+ * It combines project-level config (from `.cclens.json`) with global config,
  * with project config taking priority.
  *
  * Uses the singleton projectConfigManager (cwd-based) for project config.

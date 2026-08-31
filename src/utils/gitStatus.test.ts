@@ -61,7 +61,7 @@ describe('formatGitStatus', () => {
 describe('GitService Integration Tests', {timeout: 10000}, () => {
 	it('should handle concurrent calls correctly', async () => {
 		// Create a temporary git repo for testing
-		const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccmanager-test-'));
+		const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cclens-test-'));
 
 		try {
 			// Initialize git repo

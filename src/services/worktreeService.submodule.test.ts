@@ -10,7 +10,7 @@ describe('WorktreeService with submodules', () => {
 	// Use os.tmpdir() and unique suffix to avoid conflicts with parallel tests
 	// Use realpathSync to resolve symlinks (e.g., /var -> /private/var on macOS)
 	const testDir = fs.realpathSync(
-		fs.mkdtempSync(path.join(os.tmpdir(), 'ccmanager-ws-submodule-test-')),
+		fs.mkdtempSync(path.join(os.tmpdir(), 'cclens-ws-submodule-test-')),
 	);
 	const rootProjectDir = path.join(testDir, 'root-project');
 	const submodule1Dir = path.join(rootProjectDir, 'modules', 'submodule-1');

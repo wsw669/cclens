@@ -1,12 +1,12 @@
 # Devcontainer Integration
 
-CCManager supports running AI assistant sessions inside devcontainers while keeping the manager itself on the host machine. This provides isolated development environments with enhanced security while maintaining host-level features like notifications.
+CCLens supports running AI assistant sessions inside devcontainers while keeping the manager itself on the host machine. This provides isolated development environments with enhanced security while maintaining host-level features like notifications.
 
 ## Overview
 
 The devcontainer integration allows you to:
 - Run Claude Code or other AI assistants in isolated container environments
-- Keep CCManager on the host for status notifications and management
+- Keep CCLens on the host for status notifications and management
 - Use project-specific dependencies and tools without conflicts
 - Apply network restrictions for enhanced security
 
@@ -14,12 +14,12 @@ The devcontainer integration allows you to:
 
 - [VS Code Devcontainer CLI](https://code.visualstudio.com/docs/devcontainers/cli) installed on host
 - Docker or compatible container runtime
-- CCManager installed on the host machine
+- CCLens installed on the host machine
 
 ## Usage
 
 ```bash
-ccmanager --devc-up-command "<your devcontainer up command>" \
+cclens --devc-up-command "<your devcontainer up command>" \
               --devc-exec-command "<your devcontainer exec command>"
 ```
 
@@ -27,7 +27,7 @@ Both arguments accept any valid devcontainer commands with any options or argume
 
 ### Why Full Commands Instead of Just Arguments?
 
-CCManager accepts complete commands (not just arguments) for maximum flexibility:
+CCLens accepts complete commands (not just arguments) for maximum flexibility:
 
 - **Alternative tools**: Use `mise exec` or other wrapper tools
 - **Command variations**: Choose between `devcontainer up` or `devcontainer set-up` based on your needs  
@@ -37,13 +37,13 @@ If the command length bothers you, simply create a shell alias:
 
 ## How It Works
 
-1. **Container Startup**: When you select a worktree, CCManager executes the `--devc-up-command` to ensure the container is running
+1. **Container Startup**: When you select a worktree, CCLens executes the `--devc-up-command` to ensure the container is running
 2. **Session Creation**: The AI assistant command is executed inside the container using `--devc-exec-command`
-3. **Command Construction**: CCManager automatically appends the preset command after `--` separator:
+3. **Command Construction**: CCLens automatically appends the preset command after `--` separator:
    ```
    devcontainer exec --workspace-folder . -- claude -m claude-3-opus
    ```
-4. **Host Management**: CCManager remains on the host, managing the PTY session and triggering status hooks
+4. **Host Management**: CCLens remains on the host, managing the PTY session and triggering status hooks
 
 ## Benefits
 
@@ -54,7 +54,7 @@ If the command length bothers you, simply create a shell alias:
 
 ### Functionality
 - **Host Notifications**: Status hooks run on host, enabling desktop notifications
-- **Performance**: No need to install CCManager in every container
+- **Performance**: No need to install CCLens in every container
 - **Flexibility**: Mix and match different tool versions per project
 - **Risk-free Operations**: Safely run commands like `claude --dangerously-skip-permissions` within isolated container environments
 
@@ -65,12 +65,12 @@ For optimal devcontainer setup with Claude Code, refer to Anthropic's official d
 
 ## Preset Support
 
-All CCManager preset features work seamlessly with devcontainers:
+All CCLens preset features work seamlessly with devcontainers:
 
 ```bash
 # The preset command and args are automatically passed to the container
 # If you have a preset "claude-opus" with args ["--dangerously-skip-permissions", "-m", "claude-3-opus"]
-# CCManager will execute:
+# CCLens will execute:
 devcontainer exec --workspace-folder . -- claude --dangerously-skip-permissions -m claude-3-opus
 ```
 

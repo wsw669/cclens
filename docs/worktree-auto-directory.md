@@ -1,6 +1,6 @@
 # Automatic Worktree Directory Generation
 
-CCManager can automatically generate worktree directory paths based on branch names, eliminating the need to manually specify directories when creating new worktrees.
+CCLens can automatically generate worktree directory paths based on branch names, eliminating the need to manually specify directories when creating new worktrees.
 
 ## How It Works
 
@@ -23,7 +23,7 @@ This streamlines the worktree creation process, especially for teams with consis
 
 ### Via Configuration File
 
-Edit `~/.config/ccmanager/config.json`:
+Edit `~/.config/cclens/config.json`:
 
 ```json
 {
@@ -114,7 +114,7 @@ Pattern: `../{branch}-dev`
 ## Troubleshooting
 
 ### Directory Already Exists
-If the generated directory already exists, CCManager will show an error. You can:
+If the generated directory already exists, CCLens will show an error. You can:
 - Choose a different branch name
 - Modify the pattern to include unique elements
 - Manually specify a different directory (temporarily disable auto-generation)

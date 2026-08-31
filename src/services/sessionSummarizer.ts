@@ -2,14 +2,14 @@
  * Session summarizer: turn a finished AI coding session into a structured,
  * reusable markdown summary (what was done / key decisions / next steps).
  *
- * Summaries are stored under ~/.config/ccmanager/summaries/<project>/<id>.md
+ * Summaries are stored under ~/.config/cclens/summaries/<project>/<id>.md
  * and surfaced when a session is resumed, so long conversations stop being
  * lost context and become project assets.
  *
  * The LLM call uses any OpenAI-compatible endpoint configured via env:
- *   CCM_LLM_BASE_URL (default: https://api.deepseek.com/anthropic)
- *   CCM_LLM_API_KEY
- *   CCM_LLM_MODEL   (default: deepseek-v4-pro)
+ *   CCLENS_LLM_BASE_URL (default: https://api.deepseek.com/anthropic)
+ *   CCLENS_LLM_API_KEY
+ *   CCLENS_LLM_MODEL   (default: deepseek-v4-pro)
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -48,7 +48,7 @@ export function getSummariesDir(): string {
 	return path.join(
 		os.homedir(),
 		'.config',
-		'ccmanager',
+		'cclens',
 		'summaries',
 	);
 }
@@ -61,9 +61,9 @@ export function getSummaryPath(project: string, sessionId: string): string {
 /** Load LLM config from environment, with sensible defaults for CN users. */
 export function loadLlmConfig(): LlmConfig {
 	return {
-		baseUrl: process.env['CCM_LLM_BASE_URL'] ?? 'https://api.deepseek.com/anthropic',
-		apiKey: process.env['CCM_LLM_API_KEY'] ?? '',
-		model: process.env['CCM_LLM_MODEL'] ?? 'deepseek-v4-pro',
+		baseUrl: process.env['CCLENS_LLM_BASE_URL'] ?? 'https://api.deepseek.com/anthropic',
+		apiKey: process.env['CCLENS_LLM_API_KEY'] ?? '',
+		model: process.env['CCLENS_LLM_MODEL'] ?? 'deepseek-v4-pro',
 	};
 }
 
@@ -86,10 +86,6 @@ export function extractTranscript(
 
 	return new Promise<{role: string; text: string}[]>(resolve => {
 		rl.on('line', line => {
-			if (messages.length >= maxMessages) {
-				rl.close();
-				return;
-			}
 			if (!line) return;
 			let entry: JsonlMessage;
 			try {
@@ -101,6 +97,11 @@ export function extractTranscript(
 			const content = entry.message?.content;
 			const text = extractText(content);
 			if (!text) return;
+			if (messages.length >= maxMessages) {
+				// Keep only the most recent messages — the summary should
+				// reflect the end of the session, not its beginning.
+				messages.shift();
+			}
 			messages.push({role: entry.type, text: text.slice(0, 1500)});
 		});
 		rl.on('close', () => resolve(messages));
@@ -138,7 +139,7 @@ export async function callLlm(
 ): Promise<string> {
 	if (!config.apiKey) {
 		throw new Error(
-			'CCM_LLM_API_KEY is not set — cannot generate summaries',
+			'CCLENS_LLM_API_KEY is not set — cannot generate summaries',
 		);
 	}
 	const messages = [
@@ -167,7 +168,10 @@ export async function callLlm(
 		},
 		body: JSON.stringify({
 			model: config.model,
-			max_tokens: 1024,
+			// Thinking models (e.g. DeepSeek flash) emit a reasoning block
+			// before the answer; 1024 tokens is not enough for reasoning
+			// plus the JSON summary, so give the model headroom.
+			max_tokens: 4096,
 			messages,
 		}),
 	});
@@ -281,7 +285,7 @@ export function renderSummaryMarkdown(summary: SessionSummary): string {
 
 /**
  * Find the most recently modified session JSONL in a project directory.
- * ccmanager session ids are synthetic, so we match the finished conversation
+ * cclens session ids are synthetic, so we match the finished conversation
  * by modification time instead of id.
  */
 export function findLatestSessionFile(projectDir: string): string | null {

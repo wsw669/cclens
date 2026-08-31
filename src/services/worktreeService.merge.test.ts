@@ -8,7 +8,7 @@ import {WorktreeService} from './worktreeService.js';
 
 describe('WorktreeService mergeWorktreeEffect (real git)', () => {
 	const testDir = fs.realpathSync(
-		fs.mkdtempSync(path.join(os.tmpdir(), 'ccmanager-merge-test-')),
+		fs.mkdtempSync(path.join(os.tmpdir(), 'cclens-merge-test-')),
 	);
 	const mainRepoDir = path.join(testDir, 'main-repo');
 	const sourceWorktreeDir = path.join(testDir, 'wt-source');

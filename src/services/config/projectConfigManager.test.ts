@@ -44,7 +44,7 @@ describe('ProjectConfigManager - git repository root', () => {
 		(existsSync as ReturnType<typeof vi.fn>).mockImplementation(
 			(path: string) => {
 				// Config exists at git root, not at cwd
-				return path === `${gitRoot}/.ccmanager.json`;
+				return path === `${gitRoot}/.cclens.json`;
 			},
 		);
 
@@ -63,7 +63,7 @@ describe('ProjectConfigManager - git repository root', () => {
 
 		// Verify readFileSync was called with git root path
 		expect(readFileSync).toHaveBeenCalledWith(
-			`${gitRoot}/.ccmanager.json`,
+			`${gitRoot}/.cclens.json`,
 			'utf-8',
 		);
 	});
@@ -90,7 +90,7 @@ describe('ProjectConfigManager - git repository root', () => {
 
 		// Verify writeFileSync was called with git root path
 		expect(writeFileSync).toHaveBeenCalledWith(
-			`${gitRoot}/.ccmanager.json`,
+			`${gitRoot}/.cclens.json`,
 			expect.any(String),
 		);
 	});
@@ -111,7 +111,7 @@ describe('ProjectConfigManager - git repository root', () => {
 
 		(existsSync as ReturnType<typeof vi.fn>).mockImplementation(
 			(path: string) => {
-				return path === `${mainRepoRoot}/.ccmanager.json`;
+				return path === `${mainRepoRoot}/.cclens.json`;
 			},
 		);
 
@@ -127,7 +127,7 @@ describe('ProjectConfigManager - git repository root', () => {
 		expect(worktreeConfig).toEqual(projectConfig.worktree);
 
 		expect(readFileSync).toHaveBeenCalledWith(
-			`${mainRepoRoot}/.ccmanager.json`,
+			`${mainRepoRoot}/.cclens.json`,
 			'utf-8',
 		);
 	});

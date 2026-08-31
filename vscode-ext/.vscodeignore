@@ -1,0 +1,8 @@
+.vscode/**
+src/**
+node_modules/**
+tsconfig.json
+esbuild.mjs
+smoke-test.mjs
+package-lock.json
+*.vsix

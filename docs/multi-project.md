@@ -1,36 +1,36 @@
 # Multi-Project Mode
 
-CCManager's multi-project mode allows you to manage multiple git repositories from a single interface, making it easy to work across different projects without running multiple CCManager instances.
+CCLens's multi-project mode allows you to manage multiple git repositories from a single interface, making it easy to work across different projects without running multiple CCLens instances.
 
 ## Overview
 
-In multi-project mode, CCManager discovers all git repositories within a specified root directory and presents them in an organized interface. You can quickly switch between projects, manage their worktrees, and maintain active AI assistant sessions across all projects simultaneously.
+In multi-project mode, CCLens discovers all git repositories within a specified root directory and presents them in an organized interface. You can quickly switch between projects, manage their worktrees, and maintain active AI assistant sessions across all projects simultaneously.
 
 ## Setup
 
 ### Environment Variable
 
-Multi-project mode requires setting the `CCMANAGER_MULTI_PROJECT_ROOT` environment variable:
+Multi-project mode requires setting the `CCLENS_MULTI_PROJECT_ROOT` environment variable:
 
 ```bash
-export CCMANAGER_MULTI_PROJECT_ROOT="/path/to/your/projects"
+export CCLENS_MULTI_PROJECT_ROOT="/path/to/your/projects"
 ```
 
-This should point to a directory containing your git repositories. CCManager will recursively search this directory for all git projects.
+This should point to a directory containing your git repositories. CCLens will recursively search this directory for all git projects.
 
 ### Running in Multi-Project Mode
 
 ```bash
-npx ccmanager --multi-project
+npx cclens --multi-project
 ```
 
-If the environment variable is not set, CCManager will display an error message with instructions.
+If the environment variable is not set, CCLens will display an error message with instructions.
 
 ## Features
 
 ### Project Discovery
 
-CCManager automatically discovers git repositories by:
+CCLens automatically discovers git repositories by:
 - Recursively scanning the root directory
 - Identifying directories containing `.git` folders
 - Excluding git worktrees (they're managed separately within their parent project)
@@ -41,7 +41,7 @@ CCManager automatically discovers git repositories by:
 Frequently accessed projects are tracked and displayed at the top of the project list:
 - Projects are automatically added to recent list when selected
 - Recent projects persist between sessions
-- Stored in `~/.config/ccmanager/recent-projects.json`
+- Stored in `~/.config/cclens/recent-projects.json`
 - No limit on the number of recent projects shown
 
 ### Search Functionality
@@ -55,7 +55,7 @@ Both the project list and worktree menu support Vi-like search:
 
 ### Session Management
 
-CCManager maintains separate session managers for each project:
+CCLens maintains separate session managers for each project:
 - Sessions persist when switching between projects
 - Each project tracks its own active, busy, and waiting sessions
 - Session counts are displayed in the format `[active/busy/waiting]`
@@ -123,8 +123,8 @@ interface RecentProject {
 ### Config Files
 
 Multi-project configuration is stored in platform-specific locations:
-- Linux/macOS: `~/.config/ccmanager/`
-- Windows: `%APPDATA%/ccmanager/`
+- Linux/macOS: `~/.config/cclens/`
+- Windows: `%APPDATA%/cclens/`
 
 ### Recent Projects File
 
@@ -164,14 +164,14 @@ The `recent-projects.json` file maintains the list of recently accessed projects
 ### Projects Not Appearing
 
 1. Verify the directory contains a `.git` folder
-2. Check that `CCMANAGER_MULTI_PROJECT_ROOT` points to the correct directory
+2. Check that `CCLENS_MULTI_PROJECT_ROOT` points to the correct directory
 3. Try refreshing the project list with `R`
 4. Ensure you have read permissions for the directories
 
 ### Environment Variable Issues
 
-If you see "CCMANAGER_MULTI_PROJECT_ROOT environment variable is not set":
-1. Set the environment variable: `export CCMANAGER_MULTI_PROJECT_ROOT="/your/path"`
+If you see "CCLENS_MULTI_PROJECT_ROOT environment variable is not set":
+1. Set the environment variable: `export CCLENS_MULTI_PROJECT_ROOT="/your/path"`
 2. Add it to your shell profile for persistence
 3. Ensure the path exists and is accessible
 
@@ -192,7 +192,7 @@ If project discovery is slow:
 
 ## Integration with Existing Features
 
-Multi-project mode works seamlessly with all existing CCManager features:
+Multi-project mode works seamlessly with all existing CCLens features:
 - Command presets apply to all projects
 - Status hooks work across all sessions
 - Keyboard shortcuts remain consistent

@@ -25,9 +25,9 @@ import type {
 } from '../../types/index.js';
 
 // Test paths (matching what GlobalConfigManager constructs with mocked homedir)
-const TEST_CONFIG_PATH = '/home/test/.config/ccmanager/config.json';
+const TEST_CONFIG_PATH = '/home/test/.config/cclens/config.json';
 const TEST_LEGACY_SHORTCUTS_PATH =
-	'/home/test/.config/ccmanager/shortcuts.json';
+	'/home/test/.config/cclens/shortcuts.json';
 
 // Mock fs module
 vi.mock('fs', () => ({

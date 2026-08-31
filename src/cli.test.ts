@@ -30,10 +30,10 @@ describe('CLI', () => {
 
 	describe('--multi-project flag', () => {
 		it.skipIf(!isBunTerminalAvailable())(
-			'should exit with error when CCMANAGER_MULTI_PROJECT_ROOT is not set',
+			'should exit with error when CCLENS_MULTI_PROJECT_ROOT is not set',
 			async () => {
 				// Ensure the env var is not set
-				delete process.env['CCMANAGER_MULTI_PROJECT_ROOT'];
+				delete process.env['CCLENS_MULTI_PROJECT_ROOT'];
 
 				// Create a wrapper script that mocks TTY
 				const wrapperScript = `
@@ -65,10 +65,10 @@ describe('CLI', () => {
 
 				expect(result.code).toBe(1);
 				expect(result.stderr).toContain(
-					'CCMANAGER_MULTI_PROJECT_ROOT environment variable must be set',
+					'CCLENS_MULTI_PROJECT_ROOT environment variable must be set',
 				);
 				expect(result.stderr).toContain(
-					'export CCMANAGER_MULTI_PROJECT_ROOT=/path/to/projects',
+					'export CCLENS_MULTI_PROJECT_ROOT=/path/to/projects',
 				);
 			},
 		);
@@ -77,7 +77,7 @@ describe('CLI', () => {
 			'should not check for env var when --multi-project is not used',
 			async () => {
 				// Ensure the env var is not set
-				delete process.env['CCMANAGER_MULTI_PROJECT_ROOT'];
+				delete process.env['CCLENS_MULTI_PROJECT_ROOT'];
 
 				const result = await new Promise<{code: number; stderr: string}>(
 					resolve => {
@@ -99,7 +99,7 @@ describe('CLI', () => {
 				);
 
 				expect(result.code).toBe(0);
-				expect(result.stderr).not.toContain('CCMANAGER_MULTI_PROJECT_ROOT');
+				expect(result.stderr).not.toContain('CCLENS_MULTI_PROJECT_ROOT');
 			},
 		);
 	});

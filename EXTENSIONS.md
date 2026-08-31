@@ -1,10 +1,10 @@
-# CCManager 扩展功能：成本可视化 + 会话知识沉淀
+# CCLens 扩展功能：成本可视化 + 会话知识沉淀
 
 > 本仓库在开源会话管理器 [kbwo/ccmanager](https://github.com/kbwo/ccmanager) 基础上进行了**聚焦重构**：将 9 种 AI 助手支持收敛为 Claude Code 专属，并新增成本可视化与会话知识沉淀两个模块，解决 AI 编程助手使用中的两类核心痛点。
 
 ## 一、为什么要做（需求分析）
 
-ccmanager 解决了"会话太多管不过来"的问题，但作为重度 AI 编程助手用户，还有两个痛点没有被覆盖：
+原项目解决了"会话太多管不过来"的问题，但作为重度 AI 编程助手用户，还有两个痛点没有被覆盖：
 
 ### 痛点 1：成本盲区 💸
 每天和多个 AI agent 交互，token 在不知不觉中消耗：
@@ -26,7 +26,7 @@ ccmanager 解决了"会话太多管不过来"的问题，但作为重度 AI 编�
 
 - **全量解析**：扫描 Claude Code 项目目录下所有会话 JSONL，流式解析（支持数百 MB 大文件）
 - **多维聚合**：按模型 / 按项目 / 按日期三个维度统计 token 消耗与费用
-- **成本计算引擎**：内置主流模型价格表（DeepSeek / GLM / Kimi / 通义 / Claude），支持用户自定义价格（`~/.config/ccmanager/pricing.json`）
+- **成本计算引擎**：内置主流模型价格表（DeepSeek / GLM / Kimi / 通义 / Claude），支持用户自定义价格（`~/.config/cclens/pricing.json`）
 - **预算预警**：设定月度预算与警戒线，超支时在仪表盘顶部醒目提示
 
 ### 模块 B：会话摘要与知识沉淀（Session Summaries）
@@ -35,7 +35,7 @@ ccmanager 解决了"会话太多管不过来"的问题，但作为重度 AI 编�
 
 - **自动触发**：会话退出时自动在后台生成摘要，不阻塞操作
 - **结构化摘要**：LLM 输出四段式结构——标题 / 完成了什么 / 关键决策 / 下一步
-- **持久化存储**：markdown 存入本地知识库（`~/.config/ccmanager/summaries/<project>/`），按项目归档
+- **持久化存储**：markdown 存入本地知识库（`~/.config/cclens/summaries/<project>/`），按项目归档
 - **浏览视图**：内置摘要列表与详情视图，随时回看历史会话的结论
 
 ## 三、技术架构
@@ -51,8 +51,8 @@ session JSONL (Claude Code)
 ```
 
 - 成本分析：Node.js 流式 readline，单遍扫描，内存占用与文件大小无关
-- 摘要生成：任意 OpenAI 兼容 API（默认 DeepSeek Anthropic 兼容端点），通过 `CCM_LLM_API_KEY` 等环境变量配置
-- UI：React Ink 终端组件，与 ccmanager 原有交互模式一致（Esc 返回 / 快捷键）
+- 摘要生成：任意 OpenAI 兼容 API（默认 DeepSeek Anthropic 兼容端点），通过 `CCLENS_LLM_API_KEY` 等环境变量配置
+- UI：React Ink 终端组件，与原项目交互模式一致（Esc 返回 / 快捷键）
 
 ## 四、效果验证
 
@@ -77,15 +77,15 @@ S Session Summaries   # 会话摘要浏览
 
 成本价格自定义：
 ```bash
-# ~/.config/ccmanager/pricing.json
+# ~/.config/cclens/pricing.json
 { "deepseek-v4-pro": { "input": 2, "output": 8, "cacheRead": 0.5, "cacheWrite": 2 } }
 ```
 
 摘要功能需要配置 LLM 凭证：
 ```bash
-export CCM_LLM_API_KEY=sk-xxx
-export CCM_LLM_BASE_URL=https://api.deepseek.com/anthropic  # 可选，默认即此
-export CCM_LLM_MODEL=deepseek-v4-pro                        # 可选
+export CCLENS_LLM_API_KEY=sk-xxx
+export CCLENS_LLM_BASE_URL=https://api.deepseek.com/anthropic  # 可选，默认即此
+export CCLENS_LLM_MODEL=deepseek-v4-pro                        # 可选
 ```
 
 ## 六、迭代计划

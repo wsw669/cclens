@@ -7,14 +7,14 @@ import {worktreeConfigManager} from './services/worktreeConfigManager.js';
 import {globalSessionOrchestrator} from './services/globalSessionOrchestrator.js';
 
 // Version is injected at build time via --define flag
-declare const CCMANAGER_VERSION: string;
+declare const CCLENS_VERSION: string;
 const version =
-	typeof CCMANAGER_VERSION !== 'undefined' ? CCMANAGER_VERSION : 'dev';
+	typeof CCLENS_VERSION !== 'undefined' ? CCLENS_VERSION : 'dev';
 
 const cli = meow(
 	`
 	Usage
-	  $ ccmanager
+	  $ cclens
 
 	Options
 	  --help                Show help
@@ -24,9 +24,9 @@ const cli = meow(
 	  --devc-exec-command   Command to execute in devcontainer
 
 	Examples
-	  $ ccmanager
-	  $ ccmanager --multi-project
-	  $ ccmanager --devc-up-command "devcontainer up --workspace-folder ." --devc-exec-command "devcontainer exec --workspace-folder ."
+	  $ cclens
+	  $ cclens --multi-project
+	  $ cclens --devc-up-command "devcontainer up --workspace-folder ." --devc-exec-command "devcontainer exec --workspace-folder ."
 `,
 	{
 		importMeta: import.meta,
@@ -57,20 +57,20 @@ if (!!cli.flags.devcUpCommand !== !!cli.flags.devcExecCommand) {
 // Check if we're in a TTY environment
 if (!process.stdin.isTTY || !process.stdout.isTTY) {
 	console.error(
-		'Error: ccmanager must be run in an interactive terminal (TTY)',
+		'Error: cclens must be run in an interactive terminal (TTY)',
 	);
 	process.exit(1);
 }
 
-// Check for CCMANAGER_MULTI_PROJECT_ROOT when using --multi-project
-if (cli.flags.multiProject && !process.env['CCMANAGER_MULTI_PROJECT_ROOT']) {
+// Check for CCLENS_MULTI_PROJECT_ROOT when using --multi-project
+if (cli.flags.multiProject && !process.env['CCLENS_MULTI_PROJECT_ROOT']) {
 	console.error(
-		'Error: CCMANAGER_MULTI_PROJECT_ROOT environment variable must be set when using --multi-project',
+		'Error: CCLENS_MULTI_PROJECT_ROOT environment variable must be set when using --multi-project',
 	);
 	console.error(
 		'Please set it to the root directory containing your projects, e.g.:',
 	);
-	console.error('  export CCMANAGER_MULTI_PROJECT_ROOT=/path/to/projects');
+	console.error('  export CCLENS_MULTI_PROJECT_ROOT=/path/to/projects');
 	process.exit(1);
 }
 

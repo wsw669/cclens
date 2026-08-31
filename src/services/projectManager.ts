@@ -63,9 +63,9 @@ export class ProjectManager implements IProjectManager {
 			process.platform === 'win32'
 				? path.join(
 						process.env['APPDATA'] || path.join(homeDir, 'AppData', 'Roaming'),
-						'ccmanager',
+						'cclens',
 					)
-				: path.join(homeDir, '.config', 'ccmanager');
+				: path.join(homeDir, '.config', 'cclens');
 
 		// Ensure config directory exists
 		if (!existsSync(this.configDir)) {

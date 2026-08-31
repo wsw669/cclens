@@ -62,31 +62,31 @@ class Logger {
 	 */
 	private resolveLogPath(): string {
 		// Allow environment override for testing
-		if (process.env['CCMANAGER_LOG_FILE']) {
-			return process.env['CCMANAGER_LOG_FILE'];
+		if (process.env['CCLENS_LOG_FILE']) {
+			return process.env['CCLENS_LOG_FILE'];
 		}
 
 		// Use XDG_STATE_HOME if available (Linux/macOS standard)
 		const xdgStateHome = process.env['XDG_STATE_HOME'];
 		if (xdgStateHome) {
-			const logDir = path.join(xdgStateHome, 'ccmanager');
-			return path.join(logDir, 'ccmanager.log');
+			const logDir = path.join(xdgStateHome, 'cclens');
+			return path.join(logDir, 'cclens.log');
 		}
 
-		// Fallback to ~/.local/state/ccmanager on Linux, ~/Library/Logs on macOS
+		// Fallback to ~/.local/state/cclens on Linux, ~/Library/Logs on macOS
 		const homeDir = os.homedir();
 		if (process.platform === 'darwin') {
 			return path.join(
 				homeDir,
 				'Library',
 				'Logs',
-				'ccmanager',
-				'ccmanager.log',
+				'cclens',
+				'cclens.log',
 			);
 		}
 
 		// Linux and others
-		return path.join(homeDir, '.local', 'state', 'ccmanager', 'ccmanager.log');
+		return path.join(homeDir, '.local', 'state', 'cclens', 'cclens.log');
 	}
 
 	/**
@@ -119,7 +119,7 @@ class Logger {
 				return; // No rotation needed
 			}
 
-			// Rotate old logs: ccmanager.log.3 -> removed, .2 -> .3, .1 -> .2, .log -> .1
+			// Rotate old logs: cclens.log.3 -> removed, .2 -> .3, .1 -> .2, .log -> .1
 			for (let i = this.config.maxRotatedFiles; i > 0; i--) {
 				const oldName = i === 1 ? this.logFile : `${this.logFile}.${i - 1}`;
 				const newName = `${this.logFile}.${i}`;
